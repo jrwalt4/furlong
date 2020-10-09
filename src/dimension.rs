@@ -51,4 +51,5 @@ where
 pub type ProdDimension<Dl, Dr> = <Dl as Mul<Dr>>::Output;
 
 pub type LengthDimension = MakeDimension<P1, Z0>;
+pub type AreaDimension = MakeDimension<P2, Z0>;
 pub type TimeDimension = MakeDimension<Z0, P1>;

@@ -1,6 +1,6 @@
 use std::marker::PhantomData as PD;
 use std::ops::Mul;
-use typenum::{consts::*, Integer};
+use typenum::Integer;
 
 use crate::base_unit::*;
 use crate::dimension::*;
@@ -92,7 +92,3 @@ where
 }
 
 pub type ProdUnit<Ul, Ur> = <Ul as Mul<Ur>>::Output;
-
-pub type LengthUnit = MakeUnit<SI, LengthDimension>;
-pub type AreaUnit = MakeUnit<SI, MakeDimension<P2, Z0>>;
-pub type TimeUnit = MakeUnit<SI, TimeDimension>;

@@ -17,5 +17,3 @@ impl<LB: BaseUnit, TB: BaseUnit> UnitSystem for System<LB, TB> {
     type Length = LB;
     type Time = TB;
 }
-
-pub type SI = System<MeterBaseUnit, SecondBaseUnit>;
