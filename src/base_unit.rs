@@ -1,11 +1,12 @@
-use crate::types::*;
+use crate::types::{Real, Info};
 
 pub trait BaseUnit {
     const CONV: Real;
 }
 
 pub trait BaseUnitInfo {
-    const ABBR: Abbr;
+    const NAME: Info;
+    const SYMBOL: Info;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -14,7 +15,8 @@ impl BaseUnit for MeterBaseUnit {
     const CONV: Real = 1.0;
 }
 impl BaseUnitInfo for MeterBaseUnit {
-    const ABBR: Abbr = "m";
+    const NAME: Info = "meter";
+    const SYMBOL: Info = "m";
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -23,5 +25,6 @@ impl BaseUnit for SecondBaseUnit {
     const CONV: Real = 1.0;
 }
 impl BaseUnitInfo for SecondBaseUnit {
-    const ABBR: Abbr = "s";
+    const NAME: Info = "second";
+    const SYMBOL: Info = "s";
 }
