@@ -2,31 +2,19 @@ extern crate typenum;
 
 pub mod qnty;
 pub mod unit;
+pub mod system;
 
 mod base_unit;
 mod dimension;
 mod types;
 mod unit_system;
 
-pub mod si {
-    use super::unit_system;
-    use super::base_unit;
-    use super::unit::MakeUnit;
-    use super::dimension::*;
-
-    pub type System = unit_system::System<base_unit::KilogramBaseUnit, base_unit::MeterBaseUnit, base_unit::SecondBaseUnit>;
-
-    pub type Length = MakeUnit<System, LengthDimension>;
-    pub type Area = MakeUnit<System, AreaDimension>;
-    pub type Time = MakeUnit<System, TimeDimension>;
-}
-
 #[cfg(test)]
 mod unit_test {
     use super::{
         qnty::Qnty,
         unit::{Unit, UnitInfo},
-        si::Length,
+        system::si::Length,
     };
     #[test]
     fn length() {
