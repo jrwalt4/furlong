@@ -41,29 +41,39 @@ impl<S: UnitSystem, D: Dimension> Unit for MakeUnit<S, D> {
 impl<S, D> UnitInfo for MakeUnit<S, D>
 where
     S: UnitSystem,
+    <S as UnitSystem>::Mass: BaseUnitInfo,
     <S as UnitSystem>::Length: BaseUnitInfo,
     <S as UnitSystem>::Time: BaseUnitInfo,
     D: Dimension,
+    <D as Dimension>::Mass: Integer,
     <D as Dimension>::Length: Integer,
     <D as Dimension>::Time: Integer,
 {
     fn abbr() -> String {
+        let mass_abbr = <<S as UnitSystem>::Mass as BaseUnitInfo>::SYMBOL;
+        let mass_pwr = <<D as Dimension>::Mass as Integer>::I8;
+        let mass_part = match mass_pwr {
+            0 => String::from(""),
+            1 => String::from(mass_abbr),
+            _ => format!("{}^{}", mass_abbr, mass_pwr),
+        };
+
         let length_abbr = <<S as UnitSystem>::Length as BaseUnitInfo>::SYMBOL;
         let length_pwr = <<D as Dimension>::Length as Integer>::I8;
-
-        let time_abbr = <<S as UnitSystem>::Time as BaseUnitInfo>::SYMBOL;
-        let time_pwr = <<D as Dimension>::Time as Integer>::I8;
         let length_part = match length_pwr {
             0 => String::from(""),
             1 => String::from(length_abbr),
             _ => format!("{}^{}", length_abbr, length_pwr),
         };
+
+        let time_abbr = <<S as UnitSystem>::Time as BaseUnitInfo>::SYMBOL;
+        let time_pwr = <<D as Dimension>::Time as Integer>::I8;
         let time_part = match time_pwr {
             0 => String::from(""),
             1 => String::from(time_abbr),
             _ => format!("{}^{}", time_abbr, time_pwr),
         };
-        format!("{}{}", length_part.as_str(), time_part.as_str())
+        format!("{}{}{}", mass_part.as_str(), length_part.as_str(), time_part.as_str())
     }
 }
 

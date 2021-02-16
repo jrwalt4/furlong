@@ -10,6 +10,16 @@ pub trait BaseUnitInfo {
 }
 
 #[derive(Debug, Copy, Clone)]
+pub struct KilogramBaseUnit;
+impl BaseUnit for KilogramBaseUnit {
+    const CONV: Real = 1.0;
+}
+impl BaseUnitInfo for KilogramBaseUnit {
+    const NAME: Info = "kilo";
+    const SYMBOL: Info = "m";
+}
+
+#[derive(Debug, Copy, Clone)]
 pub struct MeterBaseUnit;
 impl BaseUnit for MeterBaseUnit {
     const CONV: Real = 1.0;

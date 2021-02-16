@@ -14,7 +14,7 @@ pub mod si {
     use super::unit::MakeUnit;
     use super::dimension::*;
 
-    pub type System = unit_system::System<base_unit::MeterBaseUnit, base_unit::SecondBaseUnit>;
+    pub type System = unit_system::System<base_unit::KilogramBaseUnit, base_unit::MeterBaseUnit, base_unit::SecondBaseUnit>;
 
     pub type Length = MakeUnit<System, LengthDimension>;
     pub type Area = MakeUnit<System, AreaDimension>;
@@ -25,7 +25,7 @@ pub mod si {
 mod unit_test {
     use super::{
         qnty::Qnty,
-        unit::Unit,
+        unit::{Unit, UnitInfo},
         si::Length,
     };
     #[test]
@@ -34,5 +34,11 @@ mod unit_test {
         let l2 = <Length as Unit>::from_value(1.5);
         let l3 = Qnty::<Length>::new(3.5);
         assert_eq!(l1 + l2, l3);
+    }
+
+    #[test]
+    fn unit_info() {
+        type U = Length;
+        assert_eq!(<U as UnitInfo>::abbr(), "m");
     }
 }
