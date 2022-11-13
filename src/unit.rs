@@ -8,12 +8,107 @@ use crate::types::{Real, Info};
 use crate::unit_system::*;
 
 pub trait BaseUnit {
-    const CONV: Real;
+    type Dimension: BaseDimension;
+}
+
+pub struct ScaledBaseUnit<B, const N: u16, const D: u16 = 1> {
+    base: PD<B>,
+    //scale: PD<R>
+}
+
+impl<B: BaseUnit, const N: u16, const D: u16> BaseUnit for ScaledBaseUnit<B, N, D>  {
+    type Dimension = <B as BaseUnit>::Dimension;
 }
 
 pub trait BaseUnitInfo {
     const NAME: Info;
     const SYMBOL: Info;
+}
+
+pub trait FromUnit<U> {
+    const FROM: f32;
+}
+
+pub trait IntoUnit<U> {
+    const INTO: f32;
+}
+
+impl<T, U: FromUnit<T>> IntoUnit<U> for T {
+    const INTO: f32 = 1.0 / <U as FromUnit<T>>::FROM;
+}
+
+impl<B: FromUnit<U>, U, const N: u16, const D: u16> FromUnit<U> for ScaledBaseUnit<B, N, D> {
+    const FROM: f32 = <B as FromUnit<U>>::FROM / (N as f32) * (D as f32) ;
+}
+
+pub mod base_unit {
+    use super::*;
+
+    #[derive(Debug, Copy, Clone)]
+    pub struct KilogramBaseUnit;
+    impl BaseUnit for KilogramBaseUnit {
+        type Dimension = MassBaseDimension;
+    }
+    impl BaseUnitInfo for KilogramBaseUnit {
+        const NAME: Info = "kilo";
+        const SYMBOL: Info = "m";
+    }
+
+    #[derive(Debug, Copy, Clone)]
+    pub struct MeterBaseUnit;
+    impl BaseUnit for MeterBaseUnit {
+        type Dimension = LengthBaseDimension;
+    }
+    impl BaseUnitInfo for MeterBaseUnit {
+        const NAME: Info = "meter";
+        const SYMBOL: Info = "m";
+    }
+
+    #[derive(Debug, Copy, Clone)]
+    pub struct FootBaseUnit;
+    impl BaseUnit for FootBaseUnit {
+        type Dimension = LengthBaseDimension;
+    }
+    impl BaseUnitInfo for FootBaseUnit {
+        const NAME: Info = "feet";
+        const SYMBOL: Info = "ft";
+    }
+
+    impl FromUnit<MeterBaseUnit> for FootBaseUnit {
+        const FROM: f32 = 3.281;
+    }
+
+    pub type YardBaseUnit = ScaledBaseUnit<FootBaseUnit, 3>;
+    impl BaseUnitInfo for YardBaseUnit {
+        const NAME: Info = "yard";
+        const SYMBOL: Info = "yd";
+    }
+
+    #[derive(Debug, Copy, Clone)]
+    pub struct SecondBaseUnit;
+    impl BaseUnit for SecondBaseUnit {
+        type Dimension = TimeBaseDimension;
+    }
+    impl BaseUnitInfo for SecondBaseUnit {
+        const NAME: Info = "second";
+        const SYMBOL: Info = "s";
+    }
+
+    pub type MinuteBaseUnit = ScaledBaseUnit<SecondBaseUnit, 60>;
+
+    #[cfg(test)]
+    mod base_unit_test {
+        use super::*;
+        use approx::assert_abs_diff_eq;
+
+        #[test]
+        fn conversion() {
+            let meters_to_feet = <FootBaseUnit as FromUnit<MeterBaseUnit>>::FROM;
+            assert_abs_diff_eq!(meters_to_feet, 3.281, epsilon = 0.001);
+            let meters_to_yards = <YardBaseUnit as FromUnit<MeterBaseUnit>>::FROM;
+            assert_abs_diff_eq!(meters_to_yards, 1.094, epsilon = 0.001);
+        }
+    }
 }
 
 pub trait Unit: Sized {

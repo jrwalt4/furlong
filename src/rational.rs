@@ -17,7 +17,7 @@ pub mod marker {
         const F32: f32 = (Self::Numer::I32 as f32)/(Self::Denom::I32 as f32);
         #[inline]
         fn to_f32() -> f32 {
-            (Self::Numer::I32 as f32) / (Self::Denom::I32 as f32)
+            Self::F32// (Self::Numer::I32 as f32) / (Self::Denom::I32 as f32)
         }
     }
 }
@@ -115,10 +115,7 @@ where
                     Prod<Dl, Dr>
                 >;
     fn sub(self, _rhs:Rational<Nr, Dr>) -> Self::Output {
-        Rational {
-            numerator: PD,
-            denomenator: PD
-        }
+        unimplemented!()
     }
 }
 

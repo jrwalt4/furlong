@@ -3,6 +3,7 @@ extern crate typenum;
 pub mod qnty;
 pub mod unit;
 pub mod system;
+pub mod rational;
 
 mod dimension;
 mod types;
