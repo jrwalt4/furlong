@@ -1,5 +1,4 @@
 use crate::unit_system;
-use crate::base_unit::*;
 use crate::unit::*;
 use crate::dimension::*;
 use crate::types::*;
@@ -39,8 +38,9 @@ pub mod si {
 
     pub type System = unit_system::System<KilogramBaseUnit, MeterBaseUnit, SecondBaseUnit>;
 
-    pub type Mass = MakeUnit<System, MassDimension>;
-    pub type Length = MakeUnit<System, LengthDimension>;
-    pub type Area = MakeUnit<System, AreaDimension>;
-    pub type Time = MakeUnit<System, TimeDimension>;
+    pub type Mass = SystemUnit<System, MassDimension>;
+    pub type Length = SystemUnit<System, LengthDimension>;
+    pub const METERS: Length = Length::new();
+    pub type Area = SystemUnit<System, AreaDimension>;
+    pub type Time = SystemUnit<System, TimeDimension>;
 }

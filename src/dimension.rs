@@ -1,62 +1,78 @@
 use std::marker::PhantomData as PD;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Sub, Mul, Div};
 use typenum::*;
 
-pub trait Dimension {
+pub trait BaseDimension {}
+
+pub struct MassBaseDimension;
+impl BaseDimension for MassBaseDimension {}
+
+pub struct LengthBaseDimension;
+impl BaseDimension for LengthBaseDimension {}
+
+pub struct TimeBaseDimension;
+impl BaseDimension for TimeBaseDimension {}
+
+pub trait Dim {
     type Mass;
     type Length;
     type Time;
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct MakeDimension<M, L, T> {
-    mass_dim: PD<M>,
-    length_dim: PD<L>,
-    time_dim: PD<T>,
-}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Dimension<M, L, T>(PD<M>,PD<L>,PD<T>);
 
-impl<M, L, T> MakeDimension<M, L, T> {
-    fn new() -> MakeDimension<M, L, T> {
-        MakeDimension {
-            mass_dim: PD,
-            length_dim: PD,
-            time_dim: PD,
-        }
-    }
-}
-
-impl<M, L, T> Dimension for MakeDimension<M, L, T> {
+impl<M, L, T> Dim for Dimension<M, L, T> {
     type Mass = M;
     type Length = L;
     type Time = T;
 }
 
-impl<M, L, T, Dr> PartialEq<Dr> for MakeDimension<M, L,T>
-where
-    Dr: Dimension<Mass = M, Length = L, Time = T>, {
-        fn eq(&self, _other: &Dr) -> bool {
-            true
-        }
+impl<M, L, T> Add for Dimension<M, L, T>
+{
+    type Output = Self;
+    fn add(self, _rhs: Self) -> Self::Output {
+        unimplemented!()
+    }
 }
 
-impl<Ml, Ll, Tl, Mr, Lr, Tr> Mul<MakeDimension<Mr, Lr, Tr>> for MakeDimension<Ml, Ll, Tl>
-where
-    Ml: Integer + Add<Mr>,
-    Ll: Integer + Add<Lr>,
-    Tl: Integer + Add<Tr>,
-    Mr: Integer,
-    Lr: Integer,
-    Tr: Integer,
+impl<M, L, T> Sub for Dimension<M, L, T>
 {
-    type Output = MakeDimension<Sum<Ml, Mr>, Sum<Ll, Lr>, Sum<Tl, Tr>>;
-    fn mul(self, _: MakeDimension<Mr, Lr, Tr>) -> Self::Output {
-        MakeDimension::new()
+    type Output = Self;
+    fn sub(self, _rhs: Self) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl<Ml, Ll, Tl, Mr, Lr, Tr> Mul<Dimension<Mr, Lr, Tr>> for Dimension<Ml, Ll, Tl>
+where
+    Ml: Add<Mr>,
+    Ll: Add<Lr>,
+    Tl: Add<Tr>,
+{
+    type Output = Dimension<Sum<Ml, Mr>, Sum<Ll, Lr>, Sum<Tl, Tr>>;
+    fn mul(self, _: Dimension<Mr, Lr, Tr>) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl<Ml, Ll, Tl, Mr, Lr, Tr> Div<Dimension<Mr, Lr, Tr>> for Dimension<Ml, Ll, Tl>
+where
+    Ml: Sub<Mr>,
+    Ll: Sub<Lr>,
+    Tl: Sub<Tr>,
+{
+    type Output = Dimension<Diff<Ml, Mr>, Diff<Ll, Lr>, Diff<Tl, Tr>>;
+    fn div(self, _: Dimension<Mr, Lr, Tr>) -> Self::Output {
+        unimplemented!()
     }
 }
 
 pub type ProdDimension<Dl, Dr> = <Dl as Mul<Dr>>::Output;
 
-pub type MassDimension = MakeDimension<P1, Z0, Z0>;
-pub type LengthDimension = MakeDimension<Z0, P1, Z0>;
-pub type AreaDimension = MakeDimension<Z0, P2, Z0>;
-pub type TimeDimension = MakeDimension<Z0, Z0, P1>;
+pub type MassDimension = Dimension<P1, Z0, Z0>;
+pub type LengthDimension = Dimension<Z0, P1, Z0>;
+pub type AreaDimension = Dimension<Z0, P2, Z0>;
+pub type TimeDimension = Dimension<Z0, Z0, P1>;
+
+
