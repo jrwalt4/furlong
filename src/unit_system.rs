@@ -1,6 +1,6 @@
 use std::marker::PhantomData as PD;
 
-use crate::base_unit::*;
+use crate::unit::BaseUnit;
 
 pub trait UnitSystem {
     type Mass: BaseUnit;

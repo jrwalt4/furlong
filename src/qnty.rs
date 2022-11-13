@@ -1,17 +1,17 @@
 use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData as PD;
-use std::ops::{Add, Mul};
+use std::ops::{Add, AddAssign, Mul};
 
 use crate::types::Real;
 use crate::unit::*;
 
 #[derive(Copy, Clone)]
-pub struct Qnty<U: Unit> {
+pub struct Qnty<U> {
     value: Real,
     unit: PD<U>,
 }
 
-impl<U: Unit> Qnty<U> {
+impl<U> Qnty<U> {
     pub fn new(value: Real) -> Qnty<U> {
         Qnty { value, unit: PD }
     }
@@ -29,13 +29,21 @@ where
 
 impl<Ul, Ur> Add<Qnty<Ur>> for Qnty<Ul>
 where
-    Ul: Unit,
-    Ur: Unit<Dim = <Ul as Unit>::Dim>,
+    Ul: Add<Ur>,
 {
     type Output = Qnty<Ul>;
-    fn add(self, rhs: Qnty<Ur>) -> Self::Output {
-        //<Self as Add<Qnty<UR>>>
-        Qnty::<Ul>::new(self.value + rhs.value)
+    fn add(mut self, rhs: Qnty<Ur>) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl<Ul, Ur> AddAssign<Qnty<Ur>> for Qnty<Ul>
+where
+    Ul: Add<Ur>
+{
+    fn add_assign(&mut self, rhs: Qnty<Ur>) {
+        self.value += rhs.value;
     }
 }
 
