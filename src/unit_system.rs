@@ -1,11 +1,12 @@
 use std::marker::PhantomData as PD;
 
 use crate::unit::BaseUnit;
+use crate::dimension::{MassBaseDimension, LengthBaseDimension, TimeBaseDimension};
 
 pub trait UnitSystem {
-    type Mass: BaseUnit;
-    type Length: BaseUnit; //+BaseUnitInfo;
-    type Time: BaseUnit; //+BaseUnitInfo;
+    type Mass: BaseUnit<Dimension = MassBaseDimension>;
+    type Length: BaseUnit<Dimension = LengthBaseDimension>;
+    type Time: BaseUnit<Dimension = TimeBaseDimension>;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -15,8 +16,13 @@ pub struct System<MB: BaseUnit, LB: BaseUnit, TB: BaseUnit> {
     time_base: PD<TB>,
 }
 
-impl<MB: BaseUnit, LB: BaseUnit, TB: BaseUnit> UnitSystem for System<MB, LB, TB> {
-    type Mass = MB;
-    type Length = LB;
-    type Time = TB;
+impl<M, L, T> UnitSystem for System<M, L, T>
+where
+    M: BaseUnit<Dimension = MassBaseDimension>,
+    L: BaseUnit<Dimension = LengthBaseDimension>,
+    T: BaseUnit<Dimension = TimeBaseDimension>,
+{
+    type Mass = M;
+    type Length = L;
+    type Time = T;
 }
