@@ -4,11 +4,12 @@ use crate::dimension::*;
 
 pub mod si {
     use super::*;
-    pub type System = unit_system::System<
-                                        base_unit::KilogramBaseUnit, 
-                                        base_unit::MeterBaseUnit, 
-                                        base_unit::SecondBaseUnit
-                                    >;
+    pub struct System;
+    impl unit_system::UnitSystem for System {
+        type Mass = base_unit::KilogramBaseUnit;
+        type Length = base_unit::MeterBaseUnit;
+        type Time = base_unit::SecondBaseUnit;
+    }
 
     pub type Mass = SystemUnit<System, MassDimension>;
     pub type Length = SystemUnit<System, LengthDimension>;

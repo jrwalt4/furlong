@@ -26,3 +26,7 @@ where
     type Length = L;
     type Time = T;
 }
+
+trait UnitSystemFrom<U> {
+    const MULTIPLY_BY: f32;
+}

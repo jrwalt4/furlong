@@ -15,15 +15,29 @@ impl<U> Qnty<U> {
     pub fn new(value: Real) -> Qnty<U> {
         Qnty { value, unit: PD }
     }
+
+    pub fn value(&self) -> Real {
+        self.value
+    }
 }
 
-impl<Ul, Ur> PartialEq<Qnty<Ur>> for Qnty<Ul>
-where
-    Ul: Unit+PartialEq<Ur>,
-    Ur: Unit,
-{
+trait QuantityFrom<T> {
+    fn from_quantity(other: &Qnty<T>) -> Self;
+}
+
+trait QuantityInto<T> {
+    fn into_quantity(self) -> Qnty<T>;
+}
+
+impl<U: UnitInto<T>, T> QuantityInto<T> for Qnty<U> {
+    fn into_quantity(self) -> Qnty<T> {
+        Qnty::new(self.value / <U as UnitInto<T>>::DIVIDE_BY as Real)
+    }
+}
+
+impl<Ul, Ur: UnitInto<Ul>> PartialEq<Qnty<Ur>> for Qnty<Ul> {
     fn eq(&self, other: &Qnty<Ur>) -> bool {
-        self.value == other.value
+        self.value == other.value / <Ur as UnitInto<Ul>>::DIVIDE_BY as Real
     }
 }
 
