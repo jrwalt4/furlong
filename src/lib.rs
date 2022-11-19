@@ -52,6 +52,14 @@ mod unit_test {
     }
 
     #[test]
+    fn divide_units() {
+        let l = 2.0 * METERS;
+        let t = Qnty::<si::Time>::new(1.0);
+        let v = l / t;
+        assert_eq!(v.value(), 2.0);
+    }
+
+    #[test]
     fn unit_info() {
         type U = MetersUnit;
         assert_eq!(<U as UnitInfo>::abbr(), "m");

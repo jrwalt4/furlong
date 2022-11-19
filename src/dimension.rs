@@ -68,8 +68,6 @@ where
     }
 }
 
-pub type ProdDimension<Dl, Dr> = <Dl as Mul<Dr>>::Output;
-
 pub type MassDimension = Dimension<P1, Z0, Z0>;
 pub type LengthDimension = Dimension<Z0, P1, Z0>;
 pub type AreaDimension = Dimension<Z0, P2, Z0>;

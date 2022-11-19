@@ -1,6 +1,6 @@
 use std::marker::PhantomData as PD;
-use std::ops::Mul;
-use typenum::Integer;
+use std::ops::{Mul, Div};
+use typenum::{Integer, Prod, Quot};
 
 use crate::dimension::*;
 use crate::qnty::Qnty;
@@ -227,15 +227,26 @@ where
 impl<S: UnitSystem, D: Dim, Ur: Unit> Mul<Ur> for SystemUnit<S, D>
 where
     D: Mul<<Ur as Unit>::Dim>,
-    ProdDimension<D, <Ur as Unit>::Dim>: Dim
+    Prod<D, <Ur as Unit>::Dim>: Dim
 {
-    type Output = SystemUnit<S, ProdDimension<D, <Ur as Unit>::Dim>>;
+    type Output = SystemUnit<S, Prod<D, <Ur as Unit>::Dim>>;
+
     fn mul(self, _: Ur) -> Self::Output {
         unimplemented!()
     }
 }
 
-pub type ProdUnit<Ul, Ur> = <Ul as Mul<Ur>>::Output;
+impl<S: UnitSystem, D: Dim, Ur: Unit> Div<Ur> for SystemUnit<S, D>
+where
+    D: Div<<Ur as Unit>::Dim>,
+    Quot<D, <Ur as Unit>::Dim>: Dim
+{
+    type Output = SystemUnit<S, Quot<D, <Ur as Unit>::Dim>>;
+
+    fn div(self, _: Ur) -> Self::Output {
+        unimplemented!();
+    }
+}
 
 impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for Real {
     type Output = Qnty<SystemUnit<S, D>>;
