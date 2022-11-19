@@ -1,5 +1,5 @@
 use std::marker::PhantomData as PD;
-use std::ops::{Add, Mul};
+use std::ops::Mul;
 use typenum::Integer;
 
 use crate::dimension::*;
@@ -8,56 +8,90 @@ use crate::types::{Real, Info};
 use crate::unit_system::*;
 
 pub trait BaseUnit {
+    /// BaseDimension of this BaseUnit
     type Dimension: BaseDimension;
+
+    /// Multiplier to get from base units (Meters, Grams, Seconds, etc.)
+    /// to this BaseUnit (i.e. how many base units are in 1 of this BaseUnit?)
+    /// Example: 
+    /// impl BaseUnit for Kilometers {
+    ///     type Dimension = LengthBaseDimension;
+    ///     const MULTIPLIER: f64 = 1000;
+    /// }
+    const MULTIPLIER: f64;
 }
 
 pub struct ScaledBaseUnit<B, const N: u16, const D: u16 = 1> {
     base: PD<B>,
-    //scale: PD<R>
 }
 
 impl<B: BaseUnit, const N: u16, const D: u16> BaseUnit for ScaledBaseUnit<B, N, D>  {
     type Dimension = <B as BaseUnit>::Dimension;
+    const MULTIPLIER: f64 = <B as BaseUnit>::MULTIPLIER * (N as f64)/(D as f64);
 }
 
-pub trait BaseUnitInfo {
+pub trait BaseUnitInfo: BaseUnit {
     const NAME: Info;
     const SYMBOL: Info;
 }
 
-pub trait BaseUnitConversion<U> {
-    const FACTOR: f32;
+pub trait BaseUnitConversion<T> {
+    const FACTOR: f64;
 }
 
-pub trait BaseUnitInto<U> {
-    const CONVERSION: f32;
-}
-
-impl<T, U: BaseUnitConversion<T>> BaseUnitInto<U> for T {
-    const CONVERSION: f32 = <U as BaseUnitConversion<T>>::FACTOR;
-}
-
-impl<B: BaseUnitConversion<U>, U, const N: u16, const D: u16> BaseUnitConversion<U> for ScaledBaseUnit<B, N, D> {
-    const FACTOR: f32 = <B as BaseUnitConversion<U>>::FACTOR / (N as f32) * (D as f32);
+impl<U: BaseUnit, T> BaseUnitConversion<T> for U
+where 
+    T: BaseUnit<Dimension = U::Dimension>
+{
+    /// multiply by `Self::MULTIPLIER` to get to `base unit`, then 
+    /// divide by `T::MULTIPLIER` to get to its unit.
+    const FACTOR: f64 = <U as BaseUnit>::MULTIPLIER / <T as BaseUnit>::MULTIPLIER;
 }
 
 pub mod base_unit {
     use super::*;
 
     #[derive(Debug, Copy, Clone)]
-    pub struct KilogramBaseUnit;
-    impl BaseUnit for KilogramBaseUnit {
+    pub struct GramBaseUnit;
+    impl BaseUnit for GramBaseUnit {
         type Dimension = MassBaseDimension;
+
+        const MULTIPLIER: f64 = 1.0;
     }
+    impl BaseUnitInfo for GramBaseUnit {
+        const NAME: Info = "gram";
+        const SYMBOL: Info = "g";
+    }
+
+    pub type KilogramBaseUnit = ScaledBaseUnit<GramBaseUnit, 1000>;
     impl BaseUnitInfo for KilogramBaseUnit {
         const NAME: Info = "kilo";
-        const SYMBOL: Info = "m";
+        const SYMBOL: Info = "kg";
+    }
+
+    #[derive(Debug, Copy, Clone)]    
+    pub struct SlugBaseUnit;
+    impl BaseUnit for SlugBaseUnit {
+        type Dimension = MassBaseDimension;
+
+        const MULTIPLIER: f64 = 14590.0;
+    }
+    impl BaseUnitInfo for SlugBaseUnit {
+        const NAME: Info = "slug";
+        const SYMBOL: Info = "slug";
+    }
+
+    pub type PoundMassBaseUnit = ScaledBaseUnit<SlugBaseUnit, 547, 17>; // 547/17 = 32.17647 ~ 32.1740
+    impl BaseUnitInfo for PoundMassBaseUnit {
+        const NAME: Info = "pound";
+        const SYMBOL: Info = "lbm";
     }
 
     #[derive(Debug, Copy, Clone)]
     pub struct MeterBaseUnit;
     impl BaseUnit for MeterBaseUnit {
         type Dimension = LengthBaseDimension;
+        const MULTIPLIER: f64 = 1.0;
     }
     impl BaseUnitInfo for MeterBaseUnit {
         const NAME: Info = "meter";
@@ -68,14 +102,11 @@ pub mod base_unit {
     pub struct FootBaseUnit;
     impl BaseUnit for FootBaseUnit {
         type Dimension = LengthBaseDimension;
+        const MULTIPLIER: f64 = 0.3048;
     }
     impl BaseUnitInfo for FootBaseUnit {
         const NAME: Info = "feet";
         const SYMBOL: Info = "ft";
-    }
-
-    impl BaseUnitConversion<MeterBaseUnit> for FootBaseUnit {
-        const FACTOR: f32 = 3.281;
     }
 
     pub type YardBaseUnit = ScaledBaseUnit<FootBaseUnit, 3>;
@@ -88,6 +119,7 @@ pub mod base_unit {
     pub struct SecondBaseUnit;
     impl BaseUnit for SecondBaseUnit {
         type Dimension = TimeBaseDimension;
+        const MULTIPLIER: f64 = 1.0;
     }
     impl BaseUnitInfo for SecondBaseUnit {
         const NAME: Info = "second";
@@ -129,16 +161,8 @@ pub trait UnitInfo: Unit {
     fn abbr() -> String;
 }
 
-pub trait UnitFrom<T> {
-    const MULTIPLY_BY: f32;
-}
-
-pub trait UnitInto<T> {
-    const DIVIDE_BY: f32;
-}
-
-impl<U: UnitFrom<T>, T> UnitInto<U> for T {
-    const DIVIDE_BY: f32 = <U as UnitFrom<T>>::MULTIPLY_BY;
+pub trait UnitConversion<T> {
+    const FACTOR: f64;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -200,17 +224,6 @@ where
     }
 }
 
-impl<S, D> Add for SystemUnit<S, D>
-where
-    S: UnitSystem,
-    D: Dim,
-{
-    type Output = Self;
-    fn add(self, _: Self) -> Self {
-        unimplemented!()
-    }
-}
-
 impl<S, Dl, Dr> Mul<SystemUnit<S, Dr>> for SystemUnit<S, Dl>
 where
     S: UnitSystem,
@@ -264,9 +277,9 @@ macro_rules! power_n {
     }};
 }
 
-impl<U1: Unit, U2: Unit> UnitFrom<U2> for U1
+impl<U1: Unit, U2: Unit> UnitConversion<U2> for U1
 where
-    U1: Unit<Dim = <U2 as Unit>::Dim>,
+    //U1: Unit<Dim = <U2 as Unit>::Dim>,
     MassBase<U1>: BaseUnitConversion<MassBase<U2>>,
     MassDim<U1>: typenum::Integer,
     LengthBase<U1>: BaseUnitConversion<LengthBase<U2>>,
@@ -274,7 +287,7 @@ where
     TimeBase<U1>: BaseUnitConversion<TimeBase<U2>>,
     TimeDim<U1>: typenum::Integer,
 {
-    const MULTIPLY_BY: f32 = 
+    const FACTOR: f64 = 
     power_n!(
         <MassBase<U1> as BaseUnitConversion<MassBase<U2>>>::FACTOR,
         <MassDim<U1> as typenum::Integer>::I32
@@ -289,3 +302,8 @@ where
     );
 }
 
+pub struct Conversion<From, To>(PD<From>,PD<To>);
+
+impl<From: UnitConversion<To>, To> UnitConversion<To> for Conversion<From, To> {
+    const FACTOR: f64 = <From as UnitConversion<To>>::FACTOR;
+}
