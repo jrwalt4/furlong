@@ -25,20 +25,20 @@ pub trait BaseUnitInfo {
     const SYMBOL: Info;
 }
 
-pub trait FromUnit<U> {
-    const FROM: f32;
+pub trait BaseUnitConversion<U> {
+    const FACTOR: f32;
 }
 
-pub trait IntoUnit<U> {
-    const INTO: f32;
+pub trait BaseUnitInto<U> {
+    const CONVERSION: f32;
 }
 
-impl<T, U: FromUnit<T>> IntoUnit<U> for T {
-    const INTO: f32 = 1.0 / <U as FromUnit<T>>::FROM;
+impl<T, U: BaseUnitConversion<T>> BaseUnitInto<U> for T {
+    const CONVERSION: f32 = <U as BaseUnitConversion<T>>::FACTOR;
 }
 
-impl<B: FromUnit<U>, U, const N: u16, const D: u16> FromUnit<U> for ScaledBaseUnit<B, N, D> {
-    const FROM: f32 = <B as FromUnit<U>>::FROM / (N as f32) * (D as f32) ;
+impl<B: BaseUnitConversion<U>, U, const N: u16, const D: u16> BaseUnitConversion<U> for ScaledBaseUnit<B, N, D> {
+    const FACTOR: f32 = <B as BaseUnitConversion<U>>::FACTOR / (N as f32) * (D as f32);
 }
 
 pub mod base_unit {
@@ -74,8 +74,8 @@ pub mod base_unit {
         const SYMBOL: Info = "ft";
     }
 
-    impl FromUnit<MeterBaseUnit> for FootBaseUnit {
-        const FROM: f32 = 3.281;
+    impl BaseUnitConversion<MeterBaseUnit> for FootBaseUnit {
+        const FACTOR: f32 = 3.281;
     }
 
     pub type YardBaseUnit = ScaledBaseUnit<FootBaseUnit, 3>;
@@ -103,9 +103,9 @@ pub mod base_unit {
 
         #[test]
         fn conversion() {
-            let meters_to_feet = <FootBaseUnit as FromUnit<MeterBaseUnit>>::FROM;
+            let meters_to_feet = <FootBaseUnit as BaseUnitConversion<MeterBaseUnit>>::FACTOR;
             assert_abs_diff_eq!(meters_to_feet, 3.281, epsilon = 0.001);
-            let meters_to_yards = <YardBaseUnit as FromUnit<MeterBaseUnit>>::FROM;
+            let meters_to_yards = <YardBaseUnit as BaseUnitConversion<MeterBaseUnit>>::FACTOR;
             assert_abs_diff_eq!(meters_to_yards, 1.094, epsilon = 0.001);
         }
     }
@@ -116,8 +116,29 @@ pub trait Unit: Sized {
     type Dim: Dim;
 }
 
+type MassBase<U> = <<U as Unit>::System as UnitSystem>::Mass;
+type MassDim<U> = <<U as Unit>::Dim as Dim>::Mass;
+
+type LengthBase<U> = <<U as Unit>::System as UnitSystem>::Length;
+type LengthDim<U> = <<U as Unit>::Dim as Dim>::Length;
+
+type TimeBase<U> = <<U as Unit>::System as UnitSystem>::Time;
+type TimeDim<U> = <<U as Unit>::Dim as Dim>::Time;
+
 pub trait UnitInfo: Unit {
     fn abbr() -> String;
+}
+
+pub trait UnitFrom<T> {
+    const MULTIPLY_BY: f32;
+}
+
+pub trait UnitInto<T> {
+    const DIVIDE_BY: f32;
+}
+
+impl<U: UnitFrom<T>, T> UnitInto<U> for T {
+    const DIVIDE_BY: f32 = <U as UnitFrom<T>>::MULTIPLY_BY;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -179,17 +200,6 @@ where
     }
 }
 
-impl<S, D, Ur> PartialEq<Ur> for SystemUnit<S, D>
-where
-    S: UnitSystem,
-    D: Dim + PartialEq<<Ur as Unit>::Dim>,
-    Ur: Unit,
-{
-    fn eq(&self, _other: &Ur) -> bool {
-        true
-    }
-}
-
 impl<S, D> Add for SystemUnit<S, D>
 where
     S: UnitSystem,
@@ -222,3 +232,60 @@ impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for Real {
         Qnty::<SystemUnit<S, D>>::new(self)
     }
 }
+
+macro_rules! power_n {
+    ( $X:expr, $N:expr) => {{
+        let mut x = $X;
+        let mut y = 1.0;
+        let mut n = $N;
+        while n > 1 {
+            match n % 2 {
+                0 => {
+                    x *= x;
+                    n /= 2;
+                },
+                1 => {
+                    y *= x;
+                    x *= x;
+                    n = (n-1)/2;
+                },
+                _ => {
+                    unreachable!();
+                }
+            }
+        }
+        let f;
+        if n == 0 {
+            f = 1.0;
+        } else {
+            f = x * y;
+        }
+        f
+    }};
+}
+
+impl<U1: Unit, U2: Unit> UnitFrom<U2> for U1
+where
+    U1: Unit<Dim = <U2 as Unit>::Dim>,
+    MassBase<U1>: BaseUnitConversion<MassBase<U2>>,
+    MassDim<U1>: typenum::Integer,
+    LengthBase<U1>: BaseUnitConversion<LengthBase<U2>>,
+    LengthDim<U1>: typenum::Integer,
+    TimeBase<U1>: BaseUnitConversion<TimeBase<U2>>,
+    TimeDim<U1>: typenum::Integer,
+{
+    const MULTIPLY_BY: f32 = 
+    power_n!(
+        <MassBase<U1> as BaseUnitConversion<MassBase<U2>>>::FACTOR,
+        <MassDim<U1> as typenum::Integer>::I32
+    ) * 
+    power_n!(
+        <LengthBase<U1> as BaseUnitConversion<LengthBase<U2>>>::FACTOR,
+        <LengthDim<U1> as typenum::Integer>::I32
+    ) *
+    power_n!(
+        <TimeBase<U1> as BaseUnitConversion<TimeBase<U2>>>::FACTOR,
+        <TimeDim<U1> as typenum::Integer>::I32
+    );
+}
+

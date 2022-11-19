@@ -20,8 +20,8 @@ mod unit_test {
     fn length() {
         let l1 = Qnty::<Length>::new(2.0);
         let l2 = 1.5 * METERS;
-        let l3 = Qnty::<Length>::new(3.5);
-        assert_eq!(l1 + l2, l3);
+        //let l3 = Qnty::<Length>::new(3.5);
+        assert_eq!((l1 + l2).value(), 3.5);
     }
 
     #[test]
