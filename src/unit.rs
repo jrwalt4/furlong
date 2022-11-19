@@ -136,9 +136,9 @@ pub mod base_unit {
         #[test]
         fn conversion() {
             let meters_to_feet = <FootBaseUnit as BaseUnitConversion<MeterBaseUnit>>::FACTOR;
-            assert_abs_diff_eq!(meters_to_feet, 3.281, epsilon = 0.001);
+            assert_abs_diff_eq!(meters_to_feet, 0.3048, epsilon = 0.001);
             let meters_to_yards = <YardBaseUnit as BaseUnitConversion<MeterBaseUnit>>::FACTOR;
-            assert_abs_diff_eq!(meters_to_yards, 1.094, epsilon = 0.001);
+            assert_abs_diff_eq!(meters_to_yards, 1.0/1.094, epsilon = 0.001);
         }
     }
 }
@@ -148,14 +148,14 @@ pub trait Unit: Sized {
     type Dim: Dim;
 }
 
-type MassBase<U> = <<U as Unit>::System as UnitSystem>::Mass;
-type MassDim<U> = <<U as Unit>::Dim as Dim>::Mass;
+pub(crate) type GetMassBase<U> = <<U as Unit>::System as UnitSystem>::Mass;
+pub(crate) type GetMassDim<U> = <<U as Unit>::Dim as Dim>::Mass;
 
-type LengthBase<U> = <<U as Unit>::System as UnitSystem>::Length;
-type LengthDim<U> = <<U as Unit>::Dim as Dim>::Length;
+pub(crate) type GetLengthBase<U> = <<U as Unit>::System as UnitSystem>::Length;
+pub(crate) type GetLengthDim<U> = <<U as Unit>::Dim as Dim>::Length;
 
-type TimeBase<U> = <<U as Unit>::System as UnitSystem>::Time;
-type TimeDim<U> = <<U as Unit>::Dim as Dim>::Time;
+pub(crate) type GetTimeBase<U> = <<U as Unit>::System as UnitSystem>::Time;
+pub(crate) type GetTimeDim<U> = <<U as Unit>::Dim as Dim>::Time;
 
 pub trait UnitInfo: Unit {
     fn abbr() -> String;
@@ -224,15 +224,13 @@ where
     }
 }
 
-impl<S, Dl, Dr> Mul<SystemUnit<S, Dr>> for SystemUnit<S, Dl>
+impl<S: UnitSystem, D: Dim, Ur: Unit> Mul<Ur> for SystemUnit<S, D>
 where
-    S: UnitSystem,
-    Dl: Dim + Mul<Dr>,
-    <Dl as Mul<Dr>>::Output: Dim,
-    Dr: Dim,
+    D: Mul<<Ur as Unit>::Dim>,
+    ProdDimension<D, <Ur as Unit>::Dim>: Dim
 {
-    type Output = SystemUnit<S, ProdDimension<Dl, Dr>>;
-    fn mul(self, _: SystemUnit<S, Dr>) -> Self::Output {
+    type Output = SystemUnit<S, ProdDimension<D, <Ur as Unit>::Dim>>;
+    fn mul(self, _: Ur) -> Self::Output {
         unimplemented!()
     }
 }
@@ -280,25 +278,25 @@ macro_rules! power_n {
 impl<U1: Unit, U2: Unit> UnitConversion<U2> for U1
 where
     //U1: Unit<Dim = <U2 as Unit>::Dim>,
-    MassBase<U1>: BaseUnitConversion<MassBase<U2>>,
-    MassDim<U1>: typenum::Integer,
-    LengthBase<U1>: BaseUnitConversion<LengthBase<U2>>,
-    LengthDim<U1>: typenum::Integer,
-    TimeBase<U1>: BaseUnitConversion<TimeBase<U2>>,
-    TimeDim<U1>: typenum::Integer,
+    GetMassBase<U1>: BaseUnitConversion<GetMassBase<U2>>,
+    GetMassDim<U1>: typenum::Integer,
+    GetLengthBase<U1>: BaseUnitConversion<GetLengthBase<U2>>,
+    GetLengthDim<U1>: typenum::Integer,
+    GetTimeBase<U1>: BaseUnitConversion<GetTimeBase<U2>>,
+    GetTimeDim<U1>: typenum::Integer,
 {
     const FACTOR: f64 = 
     power_n!(
-        <MassBase<U1> as BaseUnitConversion<MassBase<U2>>>::FACTOR,
-        <MassDim<U1> as typenum::Integer>::I32
+        <GetMassBase<U1> as BaseUnitConversion<GetMassBase<U2>>>::FACTOR,
+        <GetMassDim<U1> as typenum::Integer>::I32
     ) * 
     power_n!(
-        <LengthBase<U1> as BaseUnitConversion<LengthBase<U2>>>::FACTOR,
-        <LengthDim<U1> as typenum::Integer>::I32
+        <GetLengthBase<U1> as BaseUnitConversion<GetLengthBase<U2>>>::FACTOR,
+        <GetLengthDim<U1> as typenum::Integer>::I32
     ) *
     power_n!(
-        <TimeBase<U1> as BaseUnitConversion<TimeBase<U2>>>::FACTOR,
-        <TimeDim<U1> as typenum::Integer>::I32
+        <GetTimeBase<U1> as BaseUnitConversion<GetTimeBase<U2>>>::FACTOR,
+        <GetTimeDim<U1> as typenum::Integer>::I32
     );
 }
 

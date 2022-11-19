@@ -4,8 +4,10 @@ use std::ops::{Add, AddAssign, Mul};
 
 use approx::AbsDiffEq;
 
+use crate::dimension::*;
 use crate::types::Real;
 use crate::unit::*;
+use crate::unit_system::UnitSystem;
 
 #[derive(Copy, Clone)]
 pub struct Qnty<U> {
@@ -85,15 +87,19 @@ where
     }
 }
 
-impl<Ul, Ur> Mul<Qnty<Ur>> for Qnty<Ul>
+impl<S: UnitSystem, D: Dim, Ur> Mul<Qnty<Ur>> for Qnty<SystemUnit<S, D>>
 where
-    Ul: Unit + Mul<Ur>,
-    <Ul as Mul<Ur>>::Output: Unit,
-    Ur: Unit<System = <Ul as Unit>::System>,
+    Ur: Unit,
+    D: Mul<<Ur as Unit>::Dim>,
+    ProdDimension<D, <Ur as Unit>::Dim>: Dim,
+    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion<SystemUnit<S, Ur::Dim>>
 {
-    type Output = Qnty<ProdUnit<Ul, Ur>>;
+    type Output = Qnty<SystemUnit<S, ProdDimension<D, Ur::Dim>>>;
     fn mul(self, rhs: Qnty<Ur>) -> Self::Output {
-        Self::Output::new(self.value * rhs.value)
+        Self::Output::new(self.value * 
+            (rhs.value) * 
+            <Conversion<Ur,SystemUnit<S, Ur::Dim>> as UnitConversion<SystemUnit<S, Ur::Dim>>>::FACTOR
+        )
     }
 }
 
