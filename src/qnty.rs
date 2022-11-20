@@ -34,24 +34,27 @@ trait QuantityInto<T> {
     fn into_quantity(self) -> Qnty<T>;
 }
 
-impl<U: UnitConversion<T>, T> QuantityInto<T> for Qnty<U> {
+impl<U: Unit, T: Unit> QuantityInto<T> for Qnty<U>
+where
+    Conversion<U, T>: UnitConversion
+{
     fn into_quantity(self) -> Qnty<T> {
-        Qnty::new(self.value / <U as UnitConversion<T>>::FACTOR as Real)
+        Qnty::new(self.value * Conversion::<U, T>::FACTOR as Real)
     }
 }
 
-impl<U1, U2> AbsDiffEq<Qnty<U2>> for Qnty<U1>
+impl<Ul, Ur> AbsDiffEq<Qnty<Ur>> for Qnty<Ul>
 where
-    U2: UnitConversion<U1>
+    Conversion<Ur, Ul>: UnitConversion
 {
-    type Epsilon = Qnty<U1>;
+    type Epsilon = Qnty<Ul>;
 
     fn default_epsilon() -> Self::Epsilon {
-        Qnty::<U1>::new(0.0001)
+        Self::Epsilon::new(0.0001)
     }
 
-    fn abs_diff_eq(&self, other: &Qnty<U2>, epsilon: Self::Epsilon) -> bool {
-        self.value.abs_diff_eq(&(other.value * Conversion::<U2, U1>::FACTOR), epsilon.value)
+    fn abs_diff_eq(&self, other: &Qnty<Ur>, epsilon: Self::Epsilon) -> bool {
+        self.value.abs_diff_eq(&(other.value * Conversion::<Ur, Ul>::FACTOR), epsilon.value)
     }
 }
 
@@ -68,7 +71,7 @@ impl<Ul, Ur> Add<Qnty<Ur>> for Qnty<Ul>
 where
     Ur: Unit,
     Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Ur: UnitConversion<Ul>
+    Conversion<Ur, Ul>: UnitConversion
 {
     type Output = Qnty<Ul>;
     fn add(mut self, rhs: Qnty<Ur>) -> Self::Output {
@@ -81,7 +84,7 @@ impl<Ul, Ur> AddAssign<Qnty<Ur>> for Qnty<Ul>
 where
     Ur: Unit,
     Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Ur: UnitConversion<Ul>
+    Conversion<Ur, Ul>: UnitConversion
 {
     fn add_assign(&mut self, rhs: Qnty<Ur>) {
         self.value += rhs.value * Conversion::<Ur, Ul>::FACTOR;
@@ -92,7 +95,7 @@ impl<Ul, Ur> Sub<Qnty<Ur>> for Qnty<Ul>
 where
     Ur: Unit,
     Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Ur: UnitConversion<Ul>
+    Conversion<Ur, Ul>: UnitConversion
 {
     type Output = Qnty<Ul>;
     fn sub(mut self, rhs: Qnty<Ur>) -> Self::Output {
@@ -105,7 +108,7 @@ impl<Ul, Ur> SubAssign<Qnty<Ur>> for Qnty<Ul>
 where
     Ur: Unit,
     Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Ur: UnitConversion<Ul>
+    Conversion<Ur, Ul>: UnitConversion
 {
     fn sub_assign(&mut self, rhs: Qnty<Ur>) {
         self.value -= rhs.value * Conversion::<Ur, Ul>::FACTOR;
@@ -117,14 +120,14 @@ where
     Ur: Unit,
     D: Mul<<Ur as Unit>::Dim>,
     Prod<D, <Ur as Unit>::Dim>: Dim,
-    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion<SystemUnit<S, Ur::Dim>>
+    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion
 {
     type Output = Qnty<SystemUnit<S, Prod<D, Ur::Dim>>>;
     fn mul(self, rhs: Qnty<Ur>) -> Self::Output {
         Self::Output::new(
             self.value * 
             rhs.value * 
-            <Conversion<Ur,SystemUnit<S, Ur::Dim>> as UnitConversion<SystemUnit<S, Ur::Dim>>>::FACTOR
+            Conversion::<Ur,SystemUnit<S, Ur::Dim>>::FACTOR
         )
     }
 }
@@ -134,7 +137,7 @@ where
     Ur: Unit,
     D: Div<<Ur as Unit>::Dim>,
     Quot<D, <Ur as Unit>::Dim>: Dim,
-    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion<SystemUnit<S, Ur::Dim>>
+    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion
 {
     type Output = Qnty<SystemUnit<S, Quot<D, Ur::Dim>>>;
     fn div(self, rhs: Qnty<Ur>) -> Self::Output {
@@ -142,7 +145,7 @@ where
             self.value / 
             (
                 rhs.value *
-                <Conversion<Ur,SystemUnit<S, Ur::Dim>> as UnitConversion<SystemUnit<S, Ur::Dim>>>::FACTOR
+                Conversion::<Ur,SystemUnit<S, Ur::Dim>>::FACTOR
             )
         )
     }
