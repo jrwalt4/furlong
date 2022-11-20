@@ -1,8 +1,40 @@
+// furlong
+
+//! A crate that provides static typing for scientific units with minimal
+//! runtime impact. This is a work in progress, and actual "zero-overhead"
+//! is not yet gauranteed for unit conversions during runtime. 
+//! 
+//! ```rust
+//! extern crate furlong;
+//! extern crate typenum;
+//! 
+//! use furlong::Qnty;
+//! use furlong::system::si::{self, METERS};
+//! 
+//! # fn main() {
+//! let length = Qnty::<si::Length>::new(2.0); // 2.0 meters (si::Length)
+//! let width = 3.0 * METERS; // 3.0 meters
+//! let area = length * width;
+//! assert_eq!(area, 6.0 * METERS);
+//! 
+//! let time = Qnty::<si::Time>::new(3.0); // 3.0 seconds
+//! let velocity = length / time;
+//! type Velocity = typenum::Quot<si::Length, si::Time>;
+//! let expected = Qnty::<Velocity>::new(2.0 / 3.0);
+//! assert_eq!(velocity, expected);
+//! # }
+//! ```
+//! 
+//! The design is intended to mirror the [boost/units](http://boost.org/libs/units) library. 
+//! 
+
 extern crate typenum;
 
-pub mod qnty;
+mod qnty;
+pub use qnty::Qnty;
 pub mod unit;
 pub mod system;
+pub use system::{si, imperial};
 pub mod rational;
 
 mod dimension;
