@@ -21,6 +21,7 @@ pub trait BaseUnit {
     const MULTIPLIER: f64;
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct ScaledBaseUnit<B, const N: u16, const D: u16 = 1> {
     base: PD<B>,
 }

@@ -1,35 +1,35 @@
-use crate::unit_system::UnitSystem;
+use crate::unit_system::System;
 use crate::unit::*;
 use crate::dimension::*;
 
 macro_rules! export_base_units {
-    () => {
-        pub type Mass = SystemUnit<System, MassDimension>;
-        pub type Length = SystemUnit<System, LengthDimension>;
-        pub type Area = SystemUnit<System, AreaDimension>;
-        pub type Time = SystemUnit<System, TimeDimension>;
+    ($SYS:ty) => {
+        pub type Mass = SystemUnit<$SYS, MassDimension>;
+        pub type Length = SystemUnit<$SYS, LengthDimension>;
+        pub type Area = SystemUnit<$SYS, AreaDimension>;
+        pub type Time = SystemUnit<$SYS, TimeDimension>;
     };
 }
 pub mod si {
     use super::*;
-    pub struct System;
-    impl UnitSystem for System {
-        type Mass = base_unit::KilogramBaseUnit;
-        type Length = base_unit::MeterBaseUnit;
-        type Time = base_unit::SecondBaseUnit;
-    }
-    export_base_units!();
+
+    pub type System = super::System<
+        base_unit::KilogramBaseUnit,
+        base_unit::MeterBaseUnit,
+        base_unit::SecondBaseUnit
+    >;
+    export_base_units!(System);
     pub const METERS: Length = Length::new();
 }
 
 pub mod imperial {
     use super::*;
-    pub struct System;
-    impl UnitSystem for System {
-        type Mass = base_unit::SlugBaseUnit;
-        type Length = base_unit::FootBaseUnit;
-        type Time = base_unit::SecondBaseUnit;
-    }
-    export_base_units!();
+    
+    pub type System = super::System<
+        base_unit::SlugBaseUnit,
+        base_unit::FootBaseUnit,
+        base_unit::SecondBaseUnit
+    >;
+    export_base_units!(System);
     pub const FEET: Length = Length::new();
 }
