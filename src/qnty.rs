@@ -10,6 +10,7 @@ use crate::types::Real;
 use crate::unit::*;
 use crate::unit_system::UnitSystem;
 
+#[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct Qnty<U> {
     value: Real,
