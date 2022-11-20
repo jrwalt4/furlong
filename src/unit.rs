@@ -161,10 +161,6 @@ pub trait UnitInfo: Unit {
     fn abbr() -> String;
 }
 
-pub trait UnitConversion<T> {
-    const FACTOR: f64;
-}
-
 #[derive(Debug, Copy, Clone)]
 pub struct SystemUnit<S: UnitSystem, D: Dim> {
     system: PD<S>,
@@ -255,6 +251,10 @@ impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for Real {
     }
 }
 
+pub trait UnitConversion {
+    const FACTOR: f64;
+}
+
 macro_rules! power_n {
     ( $X:expr, $N:expr) => {{
         let mut x = $X;
@@ -286,33 +286,28 @@ macro_rules! power_n {
     }};
 }
 
-impl<U1: Unit, U2: Unit> UnitConversion<U2> for U1
+pub struct Conversion<From, To>(PD<From>,PD<To>);
+
+impl<From: Unit, To: Unit> UnitConversion for Conversion<From, To>
 where
-    //U1: Unit<Dim = <U2 as Unit>::Dim>,
-    GetMassBase<U1>: BaseUnitConversion<GetMassBase<U2>>,
-    GetMassDim<U1>: typenum::Integer,
-    GetLengthBase<U1>: BaseUnitConversion<GetLengthBase<U2>>,
-    GetLengthDim<U1>: typenum::Integer,
-    GetTimeBase<U1>: BaseUnitConversion<GetTimeBase<U2>>,
-    GetTimeDim<U1>: typenum::Integer,
+    GetMassBase<From>: BaseUnitConversion<GetMassBase<To>>,
+    GetMassDim<From>: typenum::Integer,
+    GetLengthBase<From>: BaseUnitConversion<GetLengthBase<To>>,
+    GetLengthDim<From>: typenum::Integer,
+    GetTimeBase<From>: BaseUnitConversion<GetTimeBase<To>>,
+    GetTimeDim<From>: typenum::Integer
 {
     const FACTOR: f64 = 
     power_n!(
-        <GetMassBase<U1> as BaseUnitConversion<GetMassBase<U2>>>::FACTOR,
-        <GetMassDim<U1> as typenum::Integer>::I32
+        <GetMassBase<From> as BaseUnitConversion<GetMassBase<To>>>::FACTOR,
+        <GetMassDim<From> as typenum::Integer>::I32
     ) * 
     power_n!(
-        <GetLengthBase<U1> as BaseUnitConversion<GetLengthBase<U2>>>::FACTOR,
-        <GetLengthDim<U1> as typenum::Integer>::I32
+        <GetLengthBase<From> as BaseUnitConversion<GetLengthBase<To>>>::FACTOR,
+        <GetLengthDim<From> as typenum::Integer>::I32
     ) *
     power_n!(
-        <GetTimeBase<U1> as BaseUnitConversion<GetTimeBase<U2>>>::FACTOR,
-        <GetTimeDim<U1> as typenum::Integer>::I32
+        <GetTimeBase<From> as BaseUnitConversion<GetTimeBase<To>>>::FACTOR,
+        <GetTimeDim<From> as typenum::Integer>::I32
     );
-}
-
-pub struct Conversion<From, To>(PD<From>,PD<To>);
-
-impl<From: UnitConversion<To>, To> UnitConversion<To> for Conversion<From, To> {
-    const FACTOR: f64 = <From as UnitConversion<To>>::FACTOR;
 }
