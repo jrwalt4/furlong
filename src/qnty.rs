@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Formatter, Result};
 use std::marker::PhantomData as PD;
-use std::ops::{Add, AddAssign, Mul, Div};
+use std::ops::{Add, AddAssign, Mul, Div, SubAssign, Sub};
 
 use approx::AbsDiffEq;
 use typenum::{Prod, Quot};
@@ -85,6 +85,30 @@ where
 {
     fn add_assign(&mut self, rhs: Qnty<Ur>) {
         self.value += rhs.value * Conversion::<Ur, Ul>::FACTOR;
+    }
+}
+
+impl<Ul, Ur> Sub<Qnty<Ur>> for Qnty<Ul>
+where
+    Ur: Unit,
+    Ul: Unit<Dim = <Ur as Unit>::Dim>,
+    Ur: UnitConversion<Ul>
+{
+    type Output = Qnty<Ul>;
+    fn sub(mut self, rhs: Qnty<Ur>) -> Self::Output {
+        self -= rhs;
+        self
+    }
+}
+
+impl<Ul, Ur> SubAssign<Qnty<Ur>> for Qnty<Ul>
+where
+    Ur: Unit,
+    Ul: Unit<Dim = <Ur as Unit>::Dim>,
+    Ur: UnitConversion<Ul>
+{
+    fn sub_assign(&mut self, rhs: Qnty<Ur>) {
+        self.value -= rhs.value * Conversion::<Ur, Ul>::FACTOR;
     }
 }
 

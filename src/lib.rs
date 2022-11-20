@@ -42,6 +42,14 @@ mod unit_test {
     }
 
     #[test]
+    fn subtract_units() {
+        let l1 = 3.0 * METERS;
+        let l2 = 3.0 * FEET;
+        let eps = 0.0001 * METERS;
+        assert_abs_diff_eq!(l1 - l2, 3.0*(1.0-0.3048)*METERS, epsilon = eps);
+    }
+
+    #[test]
     fn multiply_units() {
         let l1 = 2.0 * METERS;
         let l2 = 3.0 * FEET;
