@@ -52,7 +52,7 @@ where
 pub mod base_unit {
     use super::*;
 
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug)]
     pub struct GramBaseUnit;
     impl BaseUnit for GramBaseUnit {
         type Dimension = MassBaseDimension;
@@ -70,7 +70,7 @@ pub mod base_unit {
         const SYMBOL: Info = "kg";
     }
 
-    #[derive(Debug, Copy, Clone)]    
+    #[derive(Debug)]    
     pub struct SlugBaseUnit;
     impl BaseUnit for SlugBaseUnit {
         type Dimension = MassBaseDimension;
@@ -88,7 +88,7 @@ pub mod base_unit {
         const SYMBOL: Info = "lbm";
     }
 
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug)]
     pub struct MeterBaseUnit;
     impl BaseUnit for MeterBaseUnit {
         type Dimension = LengthBaseDimension;
@@ -99,7 +99,7 @@ pub mod base_unit {
         const SYMBOL: Info = "m";
     }
 
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug)]
     pub struct FootBaseUnit;
     impl BaseUnit for FootBaseUnit {
         type Dimension = LengthBaseDimension;
@@ -116,7 +116,7 @@ pub mod base_unit {
         const SYMBOL: Info = "yd";
     }
 
-    #[derive(Debug, Copy, Clone)]
+    #[derive(Debug)]
     pub struct SecondBaseUnit;
     impl BaseUnit for SecondBaseUnit {
         type Dimension = TimeBaseDimension;
@@ -162,7 +162,7 @@ pub trait UnitInfo: Unit {
     fn abbr() -> String;
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 pub struct SystemUnit<S: UnitSystem, D: Dim> {
     system: PD<S>,
     dimension: PD<D>,
@@ -176,6 +176,14 @@ impl<S: UnitSystem, D: Dim> SystemUnit<S, D> {
         }
     }
 }
+
+impl<S: UnitSystem, D: Dim> Clone for SystemUnit<S, D> {
+    fn clone(&self) -> Self {
+        SystemUnit::new()
+    }
+}
+
+impl<S: UnitSystem, D: Dim> Copy for SystemUnit<S, D> {}
 
 impl<S: UnitSystem, D: Dim> Unit for SystemUnit<S, D> {
     type System = S;

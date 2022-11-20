@@ -1,4 +1,4 @@
-use crate::unit_system::System;
+use crate::unit_system::MakeSystem;
 use crate::unit::*;
 use crate::dimension::*;
 
@@ -13,7 +13,7 @@ macro_rules! export_base_units {
 pub mod si {
     use super::*;
 
-    pub type System = super::System<
+    pub type System = MakeSystem<
         base_unit::KilogramBaseUnit,
         base_unit::MeterBaseUnit,
         base_unit::SecondBaseUnit
@@ -25,7 +25,7 @@ pub mod si {
 pub mod imperial {
     use super::*;
     
-    pub type System = super::System<
+    pub type System = MakeSystem<
         base_unit::SlugBaseUnit,
         base_unit::FootBaseUnit,
         base_unit::SecondBaseUnit
