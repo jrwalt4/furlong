@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Formatter, Result};
+use std::fmt::{Display, Debug, Formatter, Result};
 use std::marker::PhantomData as PD;
 use std::ops::{Add, AddAssign, Mul, Div, SubAssign, Sub};
 
@@ -11,11 +11,21 @@ use crate::unit::*;
 use crate::unit_system::UnitSystem;
 
 #[repr(transparent)]
-#[derive(Copy, Clone)]
 pub struct Qnty<U> {
     value: Real,
     unit: PD<U>,
 }
+
+impl<U> Clone for Qnty<U> {
+    fn clone(&self) -> Self {
+        Qnty {
+            value: self.value,
+            unit: PD
+        }
+    }
+}
+
+impl<U> Copy for Qnty<U> {}
 
 impl<U> Qnty<U> {
     pub fn new(value: Real) -> Qnty<U> {
@@ -24,23 +34,6 @@ impl<U> Qnty<U> {
 
     pub fn value(&self) -> Real {
         self.value
-    }
-}
-
-trait QuantityFrom<T> {
-    fn from_quantity(other: &Qnty<T>) -> Self;
-}
-
-trait QuantityInto<T> {
-    fn into_quantity(self) -> Qnty<T>;
-}
-
-impl<U: Unit, T: Unit> QuantityInto<T> for Qnty<U>
-where
-    Conversion<U, T>: UnitConversion
-{
-    fn into_quantity(self) -> Qnty<T> {
-        Qnty::new(self.value * Conversion::<U, T>::FACTOR as Real)
     }
 }
 
@@ -152,8 +145,17 @@ where
     }
 }
 
+impl<U: UnitInfo> Display for Qnty<U> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{0:.1$} {2}", self.value, f.precision().unwrap_or(2), <U as UnitInfo>::abbr())
+    }
+}
+
 impl<U: UnitInfo> Debug for Qnty<U> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{:?} {}", self.value, <U as UnitInfo>::abbr())
+        f.debug_struct("Qnty")
+            .field("value", &self.value)
+            .field("unit", &U::abbr())
+            .finish()
     }
 }

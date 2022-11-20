@@ -100,8 +100,17 @@ mod unit_test {
     }
 
     #[test]
+    fn copy() {
+        let l1 = 1.0 * METERS;
+        let l2 = l1;
+        assert_eq!(l1, l2);
+    }
+
+    #[test]
     fn unit_info() {
         type U = MetersUnit;
         assert_eq!(<U as UnitInfo>::abbr(), "m");
+        let length = 3.0 * METERS;
+        assert_eq!(format!("{length:.3}"), "3.000 m");
     }
 }

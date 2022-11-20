@@ -19,7 +19,7 @@ pub trait Dim {
     type Time;
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug)]
 pub struct Dimension<M, L, T>(PD<M>,PD<L>,PD<T>);
 
 impl<M, L, T> Dim for Dimension<M, L, T> {

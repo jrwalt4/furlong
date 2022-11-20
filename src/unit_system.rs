@@ -9,14 +9,14 @@ pub trait UnitSystem {
     type Time: BaseUnit<Dimension = TimeBaseDimension>;
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct System<MB: BaseUnit, LB: BaseUnit, TB: BaseUnit> {
+#[derive(Debug)]
+pub struct MakeSystem<MB, LB, TB> {
     mass_base: PD<MB>,
     length_base: PD<LB>,
     time_base: PD<TB>,
 }
 
-impl<M, L, T> UnitSystem for System<M, L, T>
+impl<M, L, T> UnitSystem for MakeSystem<M, L, T>
 where
     M: BaseUnit<Dimension = MassBaseDimension>,
     L: BaseUnit<Dimension = LengthBaseDimension>,
@@ -25,8 +25,4 @@ where
     type Mass = M;
     type Length = L;
     type Time = T;
-}
-
-trait UnitSystemFrom<U> {
-    const MULTIPLY_BY: f32;
 }
