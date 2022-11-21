@@ -262,6 +262,10 @@ impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for Real {
 
 pub trait UnitConversion {
     const FACTOR: f64;
+
+    fn convert<T: Mul<f64>>(value: T) -> <T as Mul<f64>>::Output {
+        value * Self::FACTOR
+    }
 }
 
 macro_rules! power_n {
