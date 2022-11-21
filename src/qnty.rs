@@ -6,34 +6,42 @@ use approx::AbsDiffEq;
 use typenum::{Prod, Quot};
 
 use crate::dimension::*;
-use crate::types::Real;
 use crate::unit::*;
 use crate::unit_system::UnitSystem;
 
 #[repr(transparent)]
-pub struct Qnty<U> {
-    value: Real,
+pub struct Qnty<U, T = f64> {
+    value: T,
     unit: PD<U>,
 }
 
-impl<U> Clone for Qnty<U> {
+impl<U, T: Clone> Clone for Qnty<U, T> {
     fn clone(&self) -> Self {
         Qnty {
-            value: self.value,
+            value: self.value.clone(),
             unit: PD
         }
     }
 }
 
-impl<U> Copy for Qnty<U> {}
+impl<U, T: Copy> Copy for Qnty<U, T> {}
 
-impl<U> Qnty<U> {
-    pub fn new(value: Real) -> Qnty<U> {
+impl<U, T> Qnty<U, T> {
+    pub fn new(value: T) -> Qnty<U, T> {
         Qnty { value, unit: PD }
     }
 
-    pub fn value(&self) -> Real {
-        self.value
+    pub fn value(&self) -> &T {
+        &self.value
+    }
+
+    pub fn into_unit<U2, T2>(self) -> Qnty<U2, T2>
+    where
+        Conversion<U, U2>: UnitConversion,
+        T: Into<T2>,
+        T2: Mul<f64, Output=T2>
+    {
+        Qnty::<U2, T2>::new(self.value.into() * Conversion::<U, U2>::FACTOR)
     }
 }
 
@@ -61,27 +69,31 @@ where
     }
 }
 
-impl<Ul, Ur> Add<Qnty<Ur>> for Qnty<Ul>
+impl<Ul, Tl, Ur, Tr> Add<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
     Ur: Unit,
     Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Conversion<Ur, Ul>: UnitConversion
+    Conversion<Ur, Ul>: UnitConversion,
+    Tr: Into<Tl>,
+    Tl: Mul<f64, Output=Tl> + AddAssign<Tl>
 {
-    type Output = Qnty<Ul>;
-    fn add(mut self, rhs: Qnty<Ur>) -> Self::Output {
+    type Output = Qnty<Ul, Tl>;
+    fn add(mut self, rhs: Qnty<Ur, Tr>) -> Self::Output {
         self += rhs;
         self
     }
 }
 
-impl<Ul, Ur> AddAssign<Qnty<Ur>> for Qnty<Ul>
+impl<Ul, Tl, Ur, Tr> AddAssign<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
     Ur: Unit,
     Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Conversion<Ur, Ul>: UnitConversion
+    Conversion<Ur, Ul>: UnitConversion,
+    Tr: Into<Tl>,
+    Tl: Mul<f64, Output=Tl> + AddAssign<Tl>
 {
-    fn add_assign(&mut self, rhs: Qnty<Ur>) {
-        self.value += rhs.value * Conversion::<Ur, Ul>::FACTOR;
+    fn add_assign(&mut self, rhs: Qnty<Ur, Tr>) {
+        self.value += rhs.into_unit().value;
     }
 }
 

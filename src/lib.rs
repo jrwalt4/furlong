@@ -57,6 +57,14 @@ mod unit_test {
     }
 
     #[test]
+    fn add_int_units() {
+        let l1 = 1.5 * METERS;
+        let l2 = Qnty::<si::Length, i32>::new(2);
+        let l3 = l1 + l2;
+        assert_eq!(l3, 3.5 * METERS);
+    }
+
+    #[test]
     fn add_different_units() {
         let l1 = Qnty::<FeetUnit>::new(2.0);
         let l2 = Qnty::<MetersUnit>::new(1.0);
@@ -94,7 +102,7 @@ mod unit_test {
         let l = 2.0 * METERS;
         let t = Qnty::<si::Time>::new(1.0);
         let v = l / t;
-        assert_eq!(v.value(), 2.0);
+        assert_eq!(v.value(), &2.0);
     }
 
     #[test]
