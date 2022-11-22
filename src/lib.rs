@@ -36,7 +36,6 @@ pub mod unit;
 pub mod system;
 pub use system::{si, imperial};
 mod dimension;
-mod types;
 mod unit_system;
 
 #[cfg(test)]
@@ -67,7 +66,7 @@ mod unit_test {
 
     #[test]
     fn qnty_into() {
-        let m = 0.3048 * METERS;
+        let m = 0.3048f64 * METERS;
         let ft: Qnty<FeetUnit> = m.into_unit();
         assert_abs_diff_eq!(ft.value(), &1.0, epsilon = f64::EPSILON);
     }
@@ -78,6 +77,52 @@ mod unit_test {
         let l2 = Qnty::<MetersUnit>::new(1.0);
         let l3 = 5.28084 * FEET;
         assert_abs_diff_eq!(l1 + l2, l3, epsilon = 0.0001 * FEET);
+    }
+
+    #[test]
+    fn add_different_types() {
+        let mut l_f64 = Qnty::<FeetUnit>::new(2.0);
+        let l_i32 = Qnty::<FeetUnit, i32>::new(1);
+        l_f64 += l_i32;
+        assert_eq!(l_f64, 3.0 * FEET);
+    }
+
+    #[test]
+    fn with_vectors() {
+        use std::ops::{Mul, AddAssign};
+
+        #[derive(Debug, Clone, Copy)]
+        struct Vec3<T>(T, T, T);
+
+        impl<T: Mul<f64, Output = T>> Mul<f64> for Vec3<T> {
+            type Output = Vec3<T>;
+            fn mul(self, rhs: f64) -> Self::Output {
+                Vec3(self.0 * rhs, self.1 * rhs, self.2 * rhs)
+            }
+        }
+
+        impl<T: AddAssign<T2>, T2> AddAssign<Vec3<T2>> for Vec3<T> {
+            //type Output = Vec3<<T as Add<T2>>::Output>;
+            fn add_assign(&mut self, rhs: Vec3<T2>) {//-> Self::Output {
+                //Vec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
+                self.0 += rhs.0;
+                self.1 += rhs.1;
+                self.2 += rhs.2;
+            }
+        }
+
+        impl std::cmp::PartialEq for Vec3<f64> {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0 &&
+                self.1 == other.1 &&
+                self.2 == other.2
+            }
+        }
+
+        let length_v = Qnty::<FeetUnit, Vec3<f64>>::new(Vec3::<f64>(1.0, 2.0, 3.0));
+        let width_v = length_v;
+        let perimeter_v = length_v + width_v;
+        assert_eq!(perimeter_v, Qnty::<FeetUnit, Vec3<f64>>::new(Vec3::<f64>(2.0, 4.0, 6.0)));
     }
 
     #[test]
@@ -107,7 +152,7 @@ mod unit_test {
 
     #[test]
     fn divide_units() {
-        let l = 2.0 * METERS;
+        let l = 2.0 as f64 * METERS;
         let t = Qnty::<si::Time>::new(1.0);
         let v = l / t;
         assert_eq!(v.value(), &2.0);

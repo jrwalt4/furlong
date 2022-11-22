@@ -4,8 +4,9 @@ use typenum::{Integer, Prod, Quot};
 
 use crate::dimension::*;
 use crate::qnty::Qnty;
-use crate::types::{Real, Info};
 use crate::unit_system::*;
+
+pub type Info = &'static str;
 
 pub trait BaseUnit {
     /// BaseDimension of this BaseUnit
@@ -253,12 +254,20 @@ where
     }
 }
 
-impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for Real {
-    type Output = Qnty<SystemUnit<S, D>>;
-    fn mul(self, _unit: SystemUnit<S, D>) -> Self::Output {
-        Qnty::<SystemUnit<S, D>>::new(self)
-    }
+macro_rules! impl_shorthand_ctor {
+    ($($T:ty)*) => {
+        $(
+            impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for $T {
+                type Output = Qnty<SystemUnit<S, D>, $T>;
+                fn mul(self, _unit: SystemUnit<S, D>) -> Self::Output {
+                    Qnty::<SystemUnit<S, D>, $T>::new(self)
+                }
+            }
+        )*
+    };
 }
+
+impl_shorthand_ctor!(f32 f64 i32);
 
 pub trait UnitConversion {
     const FACTOR: f64;
