@@ -35,23 +35,29 @@ impl<U, T> Qnty<U, T> {
     pub fn value(&self) -> &T {
         &self.value
     }
+}
 
-    pub fn into_unit<U2, T2>(self) -> Qnty<U2, T2>
-    where
-        Conversion<U, U2>: UnitConversion,
-        T: Into<T2>,
-        T2: Mul<f64, Output=T2>
-    {
-        Qnty::<U2, T2>::new(self.value.into() * Conversion::<U, U2>::FACTOR)
+pub trait IntoUnit<U, T> {
+    fn into_unit(self) -> Qnty<U, T>;
+}
+
+impl<U1, T1, U2, T2> IntoUnit<U2, T2> for Qnty<U1, T1>
+where
+    Conversion<U1, U2>: UnitConversion,
+    T1: Into<T2>,
+    T2: Mul<f64, Output=T2>
+{
+    fn into_unit(self) -> Qnty<U2, T2>{
+        Qnty::<U2, T2>::new(self.value.into() * Conversion::<U1, U2>::FACTOR)
     }
 }
 
-impl<U, T, U2, T2: Into<T> + Copy> Into<Qnty<U, T>> for &Qnty<U2, T2>
+impl<U1, T1, U2, T2> Into<Qnty<U2, T2>> for &Qnty<U1, T1>
 where
-    Conversion<U2, U>: UnitConversion,
-    T: Mul<f64, Output = T>
+    Qnty<U1, T1>: IntoUnit<U2, T2>,
+    Qnty<U1, T1>: Copy
 {
-    fn into(self) -> Qnty<U, T> {
+    fn into(self) -> Qnty<U2, T2> {
         self.into_unit()
     }
 }
@@ -118,27 +124,25 @@ where
     }
 }
 
-impl<Ul, Ur> Sub<Qnty<Ur>> for Qnty<Ul>
+impl<Ul, Tl, Ur, Tr> Sub<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Ur: Unit,
-    Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Conversion<Ur, Ul>: UnitConversion
+    Qnty<Ur, Tr>: IntoUnit<Ul, Tl>,
+    Tl: SubAssign
 {
-    type Output = Qnty<Ul>;
-    fn sub(mut self, rhs: Qnty<Ur>) -> Self::Output {
+    type Output = Qnty<Ul, Tl>;
+    fn sub(mut self, rhs: Qnty<Ur, Tr>) -> Self::Output {
         self -= rhs;
         self
     }
 }
 
-impl<Ul, Ur> SubAssign<Qnty<Ur>> for Qnty<Ul>
+impl<Ul, Tl, Ur, Tr> SubAssign<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Ur: Unit,
-    Ul: Unit<Dim = <Ur as Unit>::Dim>,
-    Conversion<Ur, Ul>: UnitConversion
+    Qnty<Ur, Tr>: IntoUnit<Ul, Tl>,
+    Tl: SubAssign
 {
-    fn sub_assign(&mut self, rhs: Qnty<Ur>) {
-        self.value -= rhs.value * Conversion::<Ur, Ul>::FACTOR;
+    fn sub_assign(&mut self, rhs: Qnty<Ur, Tr>) {
+        self.value -= rhs.into_unit().value;
     }
 }
 

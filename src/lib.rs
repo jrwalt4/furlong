@@ -31,7 +31,7 @@
 extern crate typenum;
 
 mod qnty;
-pub use qnty::Qnty;
+pub use qnty::{Qnty, IntoUnit};
 pub mod unit;
 pub mod system;
 pub use system::{si, imperial};
@@ -42,7 +42,7 @@ mod unit_system;
 #[cfg(test)]
 mod unit_test {
     use super::{
-        qnty::Qnty,
+        qnty::{Qnty, IntoUnit},
         unit::UnitInfo,
         system::si::{self, Length as MetersUnit, METERS},
         system::imperial::{self, Length as FeetUnit, FEET}
