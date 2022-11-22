@@ -47,6 +47,7 @@ mod unit_test {
         system::si::{self, Length as MetersUnit, METERS},
         system::imperial::{self, Length as FeetUnit, FEET}
     };
+    use std::fmt::Display;
     use approx::assert_abs_diff_eq;
     #[test]
     fn add_same_unit() {
@@ -125,5 +126,24 @@ mod unit_test {
         assert_eq!(<U as UnitInfo>::abbr(), "m");
         let length = 3.0 * METERS;
         assert_eq!(format!("{length:.3}"), "3.000 m");
+    }
+
+    #[test]
+    fn generic_unit_info() {
+        // test Display for i32
+        let q = Qnty::<FeetUnit, i32>::new(2);
+        assert_eq!(format!("{q}"), "2 ft");
+
+        // test Display for custom type
+        #[derive(Debug, Clone, Copy)]
+        struct MyValue(f32);
+        impl Display for MyValue {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{self:?}")
+            }
+        }
+        let mv = MyValue(3.0);
+        let q = Qnty::<FeetUnit, MyValue>::new(mv);
+        assert_eq!(format!("{q}"), format!("{mv} ft"));
     }
 }

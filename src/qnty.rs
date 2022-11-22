@@ -177,13 +177,13 @@ where
     }
 }
 
-impl<U: UnitInfo> Display for Qnty<U> {
+impl<U: UnitInfo, T: Display> Display for Qnty<U, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write!(f, "{0:.1$} {2}", self.value, f.precision().unwrap_or(2), <U as UnitInfo>::abbr())
     }
 }
 
-impl<U: UnitInfo> Debug for Qnty<U> {
+impl<U: UnitInfo, T: Debug> Debug for Qnty<U, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.debug_struct("Qnty")
             .field("value", &self.value)
