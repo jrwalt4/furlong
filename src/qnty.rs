@@ -3,6 +3,7 @@ use std::marker::PhantomData as PD;
 use std::ops::{Add, AddAssign, Mul, Div, SubAssign, Sub};
 
 use approx::AbsDiffEq;
+use num_traits::Float;
 use typenum::{Prod, Quot};
 
 use crate::dimension::*;
@@ -55,27 +56,37 @@ where
     }
 }
 
-impl<Ul, Ur> AbsDiffEq<Qnty<Ur>> for Qnty<Ul>
+impl<Ul, Tl, Ur, Tr> AbsDiffEq<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Conversion<Ur, Ul>: UnitConversion
+    Conversion<Ur, Ul>: UnitConversion,
+    Tr: Into<Tl>,
+    Tl: Mul<f64, Output=Tl>,
+    Tl: PartialEq<Tr>,
+    Tl: AbsDiffEq<Epsilon = Tl>,
+    Tl: Float,
+    Qnty<Ur, Tr>: Copy
 {
-    type Epsilon = Qnty<Ul>;
+    type Epsilon = Qnty<Ul, Tl>;
 
     fn default_epsilon() -> Self::Epsilon {
-        Self::Epsilon::new(f64::EPSILON)
+        Self::Epsilon::new(<Tl as Float>::epsilon())
     }
 
-    fn abs_diff_eq(&self, other: &Qnty<Ur>, epsilon: Self::Epsilon) -> bool {
-        self.value.abs_diff_eq(&(other.value * Conversion::<Ur, Ul>::FACTOR), epsilon.value)
+    fn abs_diff_eq(&self, other: &Qnty<Ur, Tr>, epsilon: Self::Epsilon) -> bool {
+        self.value.abs_diff_eq(other.into_unit().value(), epsilon.value)
     }
 }
 
-impl<Ul, Ur> PartialEq<Qnty<Ur>> for Qnty<Ul>
+impl<Ul, Tl, Ur, Tr> PartialEq<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Self: AbsDiffEq<Qnty<Ur>>
+    Conversion<Ur, Ul>: UnitConversion,
+    Tr: Into<Tl>,
+    Tl: Mul<f64, Output=Tl>,
+    Tl: PartialEq,
+    Qnty<Ur, Tr>: Copy
 {
-    fn eq(&self, other: &Qnty<Ur>) -> bool {
-        self.abs_diff_eq(other, <Self as AbsDiffEq<Qnty<Ur>>>::default_epsilon())
+    fn eq(&self, other: &Qnty<Ur, Tr>) -> bool {
+        self.value() == other.into_unit().value()
     }
 }
 
