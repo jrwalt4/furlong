@@ -65,6 +65,13 @@ mod unit_test {
     }
 
     #[test]
+    fn qnty_into() {
+        let m = 0.3048 * METERS;
+        let ft: Qnty<FeetUnit> = m.into_unit();
+        assert_abs_diff_eq!(ft.value(), &1.0, epsilon = f64::EPSILON);
+    }
+
+    #[test]
     fn add_different_units() {
         let l1 = Qnty::<FeetUnit>::new(2.0);
         let l2 = Qnty::<MetersUnit>::new(1.0);

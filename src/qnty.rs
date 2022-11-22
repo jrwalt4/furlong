@@ -45,6 +45,16 @@ impl<U, T> Qnty<U, T> {
     }
 }
 
+impl<U, T, U2, T2: Into<T> + Copy> Into<Qnty<U, T>> for &Qnty<U2, T2>
+where
+    Conversion<U2, U>: UnitConversion,
+    T: Mul<f64, Output = T>
+{
+    fn into(self) -> Qnty<U, T> {
+        self.into_unit()
+    }
+}
+
 impl<Ul, Ur> AbsDiffEq<Qnty<Ur>> for Qnty<Ul>
 where
     Conversion<Ur, Ul>: UnitConversion
@@ -52,7 +62,7 @@ where
     type Epsilon = Qnty<Ul>;
 
     fn default_epsilon() -> Self::Epsilon {
-        Self::Epsilon::new(0.0001)
+        Self::Epsilon::new(f64::EPSILON)
     }
 
     fn abs_diff_eq(&self, other: &Qnty<Ur>, epsilon: Self::Epsilon) -> bool {

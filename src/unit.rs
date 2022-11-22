@@ -100,20 +100,20 @@ pub mod base_unit {
     }
 
     #[derive(Debug)]
-    pub struct FootBaseUnit;
-    impl BaseUnit for FootBaseUnit {
+    pub struct YardBaseUnit;
+    impl BaseUnit for YardBaseUnit {
+        const MULTIPLIER: f64 = 0.9144;
         type Dimension = LengthBaseDimension;
-        const MULTIPLIER: f64 = 0.3048;
     }
-    impl BaseUnitInfo for FootBaseUnit {
-        const NAME: Info = "feet";
-        const SYMBOL: Info = "ft";
-    }
-
-    pub type YardBaseUnit = ScaledBaseUnit<FootBaseUnit, 3>;
     impl BaseUnitInfo for YardBaseUnit {
         const NAME: Info = "yard";
         const SYMBOL: Info = "yd";
+    }
+
+    pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, 1, 3>;
+    impl BaseUnitInfo for FootBaseUnit {
+        const NAME: Info = "feet";
+        const SYMBOL: Info = "ft";
     }
 
     #[derive(Debug)]
