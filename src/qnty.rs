@@ -146,39 +146,34 @@ where
     }
 }
 
-impl<S: UnitSystem, D: Dim, Ur> Mul<Qnty<Ur>> for Qnty<SystemUnit<S, D>>
+impl<S: UnitSystem, D: Dim, Tl, Ur, Tr> Mul<Qnty<Ur, Tr>> for Qnty<SystemUnit<S, D>, Tl>
 where
     Ur: Unit,
     D: Mul<<Ur as Unit>::Dim>,
     Prod<D, <Ur as Unit>::Dim>: Dim,
-    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion
+    Qnty<Ur, Tr>: IntoUnit<SystemUnit<S, Ur::Dim>, Tl>,
+    Tl: Mul<Output = Tl>
 {
-    type Output = Qnty<SystemUnit<S, Prod<D, Ur::Dim>>>;
-    fn mul(self, rhs: Qnty<Ur>) -> Self::Output {
+    type Output = Qnty<SystemUnit<S, Prod<D, Ur::Dim>>, Tl>;
+    fn mul(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
         Self::Output::new(
             self.value * 
-            rhs.value * 
-            Conversion::<Ur,SystemUnit<S, Ur::Dim>>::FACTOR
+            rhs.into_unit().value
         )
     }
 }
 
-impl<S: UnitSystem, D: Dim, Ur> Div<Qnty<Ur>> for Qnty<SystemUnit<S, D>>
+impl<S: UnitSystem, D: Dim, Tl, Ur, Tr> Div<Qnty<Ur, Tr>> for Qnty<SystemUnit<S, D>, Tl>
 where
     Ur: Unit,
     D: Div<<Ur as Unit>::Dim>,
     Quot<D, <Ur as Unit>::Dim>: Dim,
-    Conversion<Ur, SystemUnit<S, Ur::Dim>>: UnitConversion
+    Qnty<Ur, Tr>: IntoUnit<SystemUnit<S, Ur::Dim>, Tl>,
+    Tl: Div<Output = Tl>
 {
-    type Output = Qnty<SystemUnit<S, Quot<D, Ur::Dim>>>;
-    fn div(self, rhs: Qnty<Ur>) -> Self::Output {
-        Self::Output::new(
-            self.value / 
-            (
-                rhs.value *
-                Conversion::<Ur,SystemUnit<S, Ur::Dim>>::FACTOR
-            )
-        )
+    type Output = Qnty<SystemUnit<S, Quot<D, Ur::Dim>>, Tl>;
+    fn div(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
+        Self::Output::new( self.value / rhs.into_unit().value )
     }
 }
 
