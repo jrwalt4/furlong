@@ -2,9 +2,8 @@ use std::fmt::{Display, Debug, Formatter, Result};
 use std::marker::PhantomData as PD;
 use std::ops::{Add, AddAssign, Mul, Div, SubAssign, Sub};
 
-use approx::AbsDiffEq;
-use num_traits::Float;
 use typenum::{Prod, Quot};
+use num_traits::AsPrimitive;
 
 use crate::dimension::*;
 use crate::unit::*;
@@ -35,6 +34,26 @@ impl<U, T> Qnty<U, T> {
     pub fn value(&self) -> &T {
         &self.value
     }
+
+    pub fn as_type<T2>(self) -> Qnty<U, T2>
+    where
+        T2: 'static + Copy,
+        T: 'static + Copy + AsPrimitive<T2>
+    {
+        Qnty::<U, T2>::new(self.value.as_())
+    }
+
+    pub fn as_unit<U2>(self) -> Qnty<U2, <T as Mul<f64>>::Output>
+    where
+        Conversion<U, U2>: UnitConversion,
+        T: Mul<f64>
+    {
+        Qnty::<U2, <T as Mul<f64>>::Output>::new(self.value * Conversion::<U, U2>::FACTOR)
+    }
+}
+
+pub trait IntoType<T> {
+
 }
 
 pub trait IntoUnit<U, T> {
@@ -44,11 +63,11 @@ pub trait IntoUnit<U, T> {
 impl<U1, T1, U2, T2> IntoUnit<U2, T2> for Qnty<U1, T1>
 where
     Conversion<U1, U2>: UnitConversion,
-    T1: Into<T2>,
-    T2: Mul<f64, Output=T2>
+    T1: Mul<f64>,
+    <T1 as Mul<f64>>::Output: Into<T2>
 {
     fn into_unit(self) -> Qnty<U2, T2>{
-        Qnty::<U2, T2>::new(self.value.into() * Conversion::<U1, U2>::FACTOR)
+        Qnty::<U2, T2>::new((self.value * Conversion::<U1, U2>::FACTOR).into())
     }
 }
 
@@ -62,65 +81,37 @@ where
     }
 }
 
-impl<Ul, Tl, Ur, Tr> AbsDiffEq<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
-where
-    Conversion<Ur, Ul>: UnitConversion,
-    Tr: Into<Tl>,
-    Tl: Mul<f64, Output=Tl>,
-    Tl: PartialEq<Tr>,
-    Tl: AbsDiffEq<Epsilon = Tl>,
-    Tl: Float,
-    Qnty<Ur, Tr>: Copy
-{
-    type Epsilon = Qnty<Ul, Tl>;
-
-    fn default_epsilon() -> Self::Epsilon {
-        Self::Epsilon::new(<Tl as Float>::epsilon())
-    }
-
-    fn abs_diff_eq(&self, other: &Qnty<Ur, Tr>, epsilon: Self::Epsilon) -> bool {
-        self.value.abs_diff_eq(other.into_unit().value(), epsilon.value)
-    }
-}
-
 impl<Ul, Tl, Ur, Tr> PartialEq<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
     Conversion<Ur, Ul>: UnitConversion,
-    Tr: Into<Tl>,
-    Tl: Mul<f64, Output=Tl>,
-    Tl: PartialEq,
-    Qnty<Ur, Tr>: Copy
+    Tr: Mul<f64> + Copy,
+    Tl: PartialEq<<Tr as Mul<f64>>::Output>,
 {
     fn eq(&self, other: &Qnty<Ur, Tr>) -> bool {
-        self.value() == other.into_unit().value()
+        self.value == *other.value() * Conversion::<Ur, Ul>::FACTOR
     }
 }
 
 impl<Ul, Tl, Ur, Tr> Add<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Ur: Unit,
-    Ul: Unit<Dim = <Ur as Unit>::Dim>,
     Conversion<Ur, Ul>: UnitConversion,
-    Tr: Into<Tl>,
-    Tl: Mul<f64, Output=Tl> + AddAssign<Tl>
+    Tr: Mul<f64>,
+    Tl: Add<<Tr as Mul<f64>>::Output>
 {
-    type Output = Qnty<Ul, Tl>;
-    fn add(mut self, rhs: Qnty<Ur, Tr>) -> Self::Output {
-        self += rhs;
-        self
+    type Output = Qnty<Ul, <Tl as Add<<Tr as Mul<f64>>::Output>>::Output>;
+    fn add(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
+        Self::Output::new(self.value + rhs.as_unit::<Ul>().value)
     }
 }
 
 impl<Ul, Tl, Ur, Tr> AddAssign<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Ur: Unit,
-    Ul: Unit<Dim = <Ur as Unit>::Dim>,
     Conversion<Ur, Ul>: UnitConversion,
-    Tr: Into<Tl>,
-    Tl: Mul<f64, Output=Tl> + AddAssign<Tl>
+    Tr: Mul<f64>,
+    Tl: AddAssign<<Tr as Mul<f64>>::Output>
 {
     fn add_assign(&mut self, rhs: Qnty<Ur, Tr>) {
-        self.value += rhs.into_unit().value;
+        self.value += rhs.as_unit().value;
     }
 }
 

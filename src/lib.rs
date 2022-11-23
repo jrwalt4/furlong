@@ -42,12 +42,11 @@ mod unit_system;
 mod unit_test {
     use super::{
         qnty::{Qnty, IntoUnit},
-        unit::UnitInfo,
+        unit::{UnitInfo, BaseUnit, base_unit::FootBaseUnit},
         system::si::{self, Length as MetersUnit, METERS},
         system::imperial::{self, Length as FeetUnit, FEET}
     };
     use std::fmt::Display;
-    use approx::assert_abs_diff_eq;
     #[test]
     fn add_same_unit() {
         let l1 = Qnty::<MetersUnit>::new(2.0);
@@ -60,15 +59,16 @@ mod unit_test {
     fn add_int_units() {
         let l1 = 1.5 * METERS;
         let l2 = Qnty::<si::Length, i32>::new(2);
-        let l3 = l1 + l2;
+        let l3 = l1 + l2.as_type::<f64>();
         assert_eq!(l3, 3.5 * METERS);
     }
 
     #[test]
     fn qnty_into() {
-        let m = 0.3048f64 * METERS;
+        let m = (0.9144/3.0) as f64 * METERS;
         let ft: Qnty<FeetUnit> = m.into_unit();
-        assert_abs_diff_eq!(ft.value(), &1.0, epsilon = f64::EPSILON);
+        assert_eq!(ft.value(), &1.0);
+        assert_eq!(ft, m);
     }
 
     #[test]
@@ -76,20 +76,20 @@ mod unit_test {
         let l1 = Qnty::<FeetUnit>::new(2.0);
         let l2 = Qnty::<MetersUnit>::new(1.0);
         let l3 = 5.28084 * FEET;
-        assert_abs_diff_eq!(l1 + l2, l3, epsilon = 0.0001 * FEET);
+        assert_eq!(l1 + l2, l3);
     }
 
     #[test]
     fn add_different_types() {
         let mut l_f64 = Qnty::<FeetUnit>::new(2.0);
         let l_i32 = Qnty::<FeetUnit, i32>::new(1);
-        l_f64 += l_i32;
+        l_f64 += l_i32.as_type::<f64>();
         assert_eq!(l_f64, 3.0 * FEET);
     }
 
     #[test]
     fn with_vectors() {
-        use std::ops::{Mul, AddAssign};
+        use std::ops::{Mul, Add};
 
         #[derive(Debug, Clone, Copy)]
         struct Vec3<T>(T, T, T);
@@ -101,13 +101,10 @@ mod unit_test {
             }
         }
 
-        impl<T: AddAssign<T2>, T2> AddAssign<Vec3<T2>> for Vec3<T> {
-            //type Output = Vec3<<T as Add<T2>>::Output>;
-            fn add_assign(&mut self, rhs: Vec3<T2>) {//-> Self::Output {
-                //Vec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-                self.0 += rhs.0;
-                self.1 += rhs.1;
-                self.2 += rhs.2;
+        impl<T: Add<T2>, T2> Add<Vec3<T2>> for Vec3<T> {
+            type Output = Vec3<<T as Add<T2>>::Output>;
+            fn add(self, rhs: Vec3<T2>) -> Self::Output {
+                Vec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
             }
         }
 
@@ -129,17 +126,15 @@ mod unit_test {
     fn add_complex_units() {
         let a1 = Qnty::<si::Area>::new(2.0);
         let a2 = Qnty::<imperial::Area>::new(2.0);
-        let a1a2 = Qnty::<si::Area>::new(2.18581);
-        let eps = Qnty::<si::Area>::new(0.001);
-        assert_abs_diff_eq!(a1 + a2, a1a2, epsilon = eps );
+        let a1a2 = Qnty::<si::Area>::new(2.0*(1.0 + <FootBaseUnit as BaseUnit>::MULTIPLIER.powi(2)));
+        assert_eq!(a1 + a2, a1a2);
     }
 
     #[test]
     fn subtract_units() {
         let l1 = 3.0 * METERS;
         let l2 = 3.0 * FEET;
-        let eps = 0.0001 * METERS;
-        assert_abs_diff_eq!(l1 - l2, 3.0*(1.0-0.3048)*METERS, epsilon = eps);
+        assert_eq!(l1 - l2, 3.0*(1.0-0.3048)*METERS);
     }
 
     #[test]
@@ -147,7 +142,7 @@ mod unit_test {
         let l1 = 2.0 * METERS;
         let l2 = 3.0 * FEET;
         let a1 = l1 * l2;
-        assert_abs_diff_eq!(a1, Qnty::<si::Area>::new(2.0*3.0*0.3048));
+        assert_eq!(a1, Qnty::<si::Area>::new(2.0*3.0*0.3048));
     }
 
     #[test]

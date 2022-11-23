@@ -129,20 +129,6 @@ pub mod base_unit {
     }
 
     pub type MinuteBaseUnit = ScaledBaseUnit<SecondBaseUnit, 60>;
-
-    #[cfg(test)]
-    mod base_unit_test {
-        use super::*;
-        use approx::assert_abs_diff_eq;
-
-        #[test]
-        fn conversion() {
-            let meters_to_feet = <FootBaseUnit as BaseUnitConversion<MeterBaseUnit>>::FACTOR;
-            assert_abs_diff_eq!(meters_to_feet, 0.3048, epsilon = 0.001);
-            let meters_to_yards = <YardBaseUnit as BaseUnitConversion<MeterBaseUnit>>::FACTOR;
-            assert_abs_diff_eq!(meters_to_yards, 1.0/1.094, epsilon = 0.001);
-        }
-    }
 }
 
 pub trait Unit: Sized {
@@ -269,10 +255,11 @@ macro_rules! impl_shorthand_ctor {
 
 impl_shorthand_ctor!(f32 f64 i32);
 
-pub trait UnitConversion {
-    const FACTOR: f64;
+pub trait UnitConversion<T = f64> {
+    const FACTOR: T;
 
-    fn convert<T: Mul<f64>>(value: T) -> <T as Mul<f64>>::Output {
+    fn convert(value: T) -> <T as Mul>::Output
+    where T: Mul {
         value * Self::FACTOR
     }
 }
@@ -308,10 +295,11 @@ macro_rules! power_n {
     }};
 }
 
-pub struct Conversion<From, To>(PD<From>,PD<To>);
+pub struct Conversion<From, To, T=f64>(PD<From>,PD<To>, PD<T>);
 
-impl<From: Unit, To: Unit> UnitConversion for Conversion<From, To>
+impl<From, To: Unit> UnitConversion for Conversion<From, To>
 where
+    From: Unit<Dim = To::Dim>,
     GetMassBase<From>: BaseUnitConversion<GetMassBase<To>>,
     GetMassDim<From>: typenum::Integer,
     GetLengthBase<From>: BaseUnitConversion<GetLengthBase<To>>,
