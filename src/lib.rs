@@ -30,6 +30,8 @@
 
 extern crate typenum;
 
+pub mod base_dimension;
+mod base_unit;
 mod qnty;
 pub use qnty::{Qnty, IntoUnit};
 pub mod unit;
@@ -42,7 +44,8 @@ mod unit_system;
 mod unit_test {
     use super::{
         qnty::{Qnty, IntoUnit},
-        unit::{UnitInfo, BaseUnit, base_unit::FootBaseUnit},
+        base_unit::{BaseUnit, FootBaseUnit},
+        unit::UnitInfo,
         system::si::{self, Length as MetersUnit, METERS},
         system::imperial::{self, Length as FeetUnit, FEET}
     };

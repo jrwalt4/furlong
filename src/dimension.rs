@@ -2,17 +2,6 @@ use std::marker::PhantomData as PD;
 use std::ops::{Add, Sub, Mul, Div};
 use typenum::*;
 
-pub trait BaseDimension {}
-
-pub struct MassBaseDimension;
-impl BaseDimension for MassBaseDimension {}
-
-pub struct LengthBaseDimension;
-impl BaseDimension for LengthBaseDimension {}
-
-pub struct TimeBaseDimension;
-impl BaseDimension for TimeBaseDimension {}
-
 pub trait Dim {
     type Mass;
     type Length;

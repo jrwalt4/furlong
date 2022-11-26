@@ -1,7 +1,7 @@
 use std::marker::PhantomData as PD;
 
-use crate::unit::BaseUnit;
-use crate::dimension::{MassBaseDimension, LengthBaseDimension, TimeBaseDimension};
+use crate::base_unit::BaseUnit;
+use crate::base_dimension::{MassBaseDimension, LengthBaseDimension, TimeBaseDimension};
 
 pub trait UnitSystem {
     type Mass: BaseUnit<Dimension = MassBaseDimension>;
