@@ -15,7 +15,7 @@
 //! let length = Qnty::<si::Length>::new(2.0); // 2.0 meters (si::Length)
 //! let width = 3.0 * METERS; // 3.0 meters
 //! let area = length * width;
-//! assert_eq!(area, 6.0 * METERS);
+//! assert_eq!(area, Qnty::<si::Area>::new(6.0));
 //! 
 //! let time = Qnty::<si::Time>::new(3.0); // 3.0 seconds
 //! let velocity = length / time;
@@ -44,7 +44,7 @@ mod unit_system;
 mod unit_test {
     use super::{
         qnty::{Qnty, IntoUnit},
-        base_unit::{BaseUnit, FootBaseUnit},
+        base_unit::{BaseUnit, length::FootBaseUnit},
         unit::UnitInfo,
         system::si::{self, Length as MetersUnit, METERS},
         system::imperial::{self, Length as FeetUnit, FEET}
@@ -70,7 +70,6 @@ mod unit_test {
     fn qnty_into() {
         let m = (0.9144/3.0) as f64 * METERS;
         let ft: Qnty<FeetUnit> = m.into_unit();
-        assert_eq!(ft.value(), &1.0);
         assert_eq!(ft, m);
     }
 
@@ -78,7 +77,7 @@ mod unit_test {
     fn add_different_units() {
         let l1 = Qnty::<FeetUnit>::new(2.0);
         let l2 = Qnty::<MetersUnit>::new(1.0);
-        let l3 = 5.28084 * FEET;
+        let l3 = (2.0 + 3.0 / 0.9144) * FEET;
         assert_eq!(l1 + l2, l3);
     }
 
@@ -137,7 +136,7 @@ mod unit_test {
     fn subtract_units() {
         let l1 = 3.0 * METERS;
         let l2 = 3.0 * FEET;
-        assert_eq!(l1 - l2, 3.0*(1.0-0.3048)*METERS);
+        assert_eq!(l1 - l2, (3.0-0.9144)*METERS);
     }
 
     #[test]

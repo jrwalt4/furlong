@@ -1,4 +1,4 @@
-use crate::base_unit;
+use crate::base_unit::{mass, length, time};
 use crate::unit_system::MakeSystem;
 use crate::unit::*;
 use crate::dimension::*;
@@ -15,9 +15,9 @@ pub mod si {
     use super::*;
 
     pub type System = MakeSystem<
-        base_unit::KilogramBaseUnit,
-        base_unit::MeterBaseUnit,
-        base_unit::SecondBaseUnit
+        mass::KilogramBaseUnit,
+        length::MeterBaseUnit,
+        time::SecondBaseUnit
     >;
     export_base_units!(System);
     pub const METERS: Length = Length::new();
@@ -27,9 +27,9 @@ pub mod imperial {
     use super::*;
     
     pub type System = MakeSystem<
-        base_unit::SlugBaseUnit,
-        base_unit::FootBaseUnit,
-        base_unit::SecondBaseUnit
+        mass::SlugBaseUnit,
+        length::FootBaseUnit,
+        time::SecondBaseUnit
     >;
     export_base_units!(System);
     pub const FEET: Length = Length::new();

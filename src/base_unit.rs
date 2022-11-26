@@ -46,79 +46,89 @@ where
     const FACTOR: f64 = <U as BaseUnit>::MULTIPLIER / <T as BaseUnit>::MULTIPLIER;
 }
 
-#[derive(Debug)]
-pub struct GramBaseUnit;
-impl BaseUnit for GramBaseUnit {
-    type Dimension = MassBaseDimension;
+pub mod mass {
+    use super::*;
+    #[derive(Debug)]
+    pub struct GramBaseUnit;
+    impl BaseUnit for GramBaseUnit {
+        type Dimension = MassBaseDimension;
 
-    const MULTIPLIER: f64 = 1.0;
-}
-impl BaseUnitInfo for GramBaseUnit {
-    const NAME: Info = "gram";
-    const SYMBOL: Info = "g";
-}
+        const MULTIPLIER: f64 = 1.0;
+    }
+    impl BaseUnitInfo for GramBaseUnit {
+        const NAME: Info = "gram";
+        const SYMBOL: Info = "g";
+    }
 
-pub type KilogramBaseUnit = ScaledBaseUnit<GramBaseUnit, 1000>;
-impl BaseUnitInfo for KilogramBaseUnit {
-    const NAME: Info = "kilo";
-    const SYMBOL: Info = "kg";
-}
+    pub type KilogramBaseUnit = ScaledBaseUnit<GramBaseUnit, 1000>;
+    impl BaseUnitInfo for KilogramBaseUnit {
+        const NAME: Info = "kilo";
+        const SYMBOL: Info = "kg";
+    }
+  
+    #[derive(Debug)]
+    pub struct SlugBaseUnit;
+    impl BaseUnit for SlugBaseUnit {
+        type Dimension = MassBaseDimension;
 
-#[derive(Debug)]    
-pub struct SlugBaseUnit;
-impl BaseUnit for SlugBaseUnit {
-    type Dimension = MassBaseDimension;
+        const MULTIPLIER: f64 = 14590.0;
+    }
+    impl BaseUnitInfo for SlugBaseUnit {
+        const NAME: Info = "slug";
+        const SYMBOL: Info = "slug";
+    }
 
-    const MULTIPLIER: f64 = 14590.0;
-}
-impl BaseUnitInfo for SlugBaseUnit {
-    const NAME: Info = "slug";
-    const SYMBOL: Info = "slug";
-}
-
-pub type PoundMassBaseUnit = ScaledBaseUnit<SlugBaseUnit, 547, 17>; // 547/17 = 32.17647 ~ 32.1740
-impl BaseUnitInfo for PoundMassBaseUnit {
-    const NAME: Info = "pound";
-    const SYMBOL: Info = "lbm";
-}
-
-#[derive(Debug)]
-pub struct MeterBaseUnit;
-impl BaseUnit for MeterBaseUnit {
-    type Dimension = LengthBaseDimension;
-    const MULTIPLIER: f64 = 1.0;
-}
-impl BaseUnitInfo for MeterBaseUnit {
-    const NAME: Info = "meter";
-    const SYMBOL: Info = "m";
+    pub type PoundMassBaseUnit = ScaledBaseUnit<SlugBaseUnit, 16087, 500>; // 16087/500 = 32.174
+    impl BaseUnitInfo for PoundMassBaseUnit {
+        const NAME: Info = "pound";
+        const SYMBOL: Info = "lbm";
+    }
 }
 
-#[derive(Debug)]
-pub struct YardBaseUnit;
-impl BaseUnit for YardBaseUnit {
-    const MULTIPLIER: f64 = 0.9144;
-    type Dimension = LengthBaseDimension;
-}
-impl BaseUnitInfo for YardBaseUnit {
-    const NAME: Info = "yard";
-    const SYMBOL: Info = "yd";
+pub mod length {
+    use super::*;
+    #[derive(Debug)]
+    pub struct MeterBaseUnit;
+    impl BaseUnit for MeterBaseUnit {
+        type Dimension = LengthBaseDimension;
+        const MULTIPLIER: f64 = 1.0;
+    }
+    impl BaseUnitInfo for MeterBaseUnit {
+        const NAME: Info = "meter";
+        const SYMBOL: Info = "m";
+    }
+
+    #[derive(Debug)]
+    pub struct YardBaseUnit;
+    impl BaseUnit for YardBaseUnit {
+        const MULTIPLIER: f64 = 0.9144;
+        type Dimension = LengthBaseDimension;
+    }
+    impl BaseUnitInfo for YardBaseUnit {
+        const NAME: Info = "yard";
+        const SYMBOL: Info = "yd";
+    }
+
+    pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, 1, 3>;
+    impl BaseUnitInfo for FootBaseUnit {
+        const NAME: Info = "feet";
+        const SYMBOL: Info = "ft";
+    }
 }
 
-pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, 1, 3>;
-impl BaseUnitInfo for FootBaseUnit {
-    const NAME: Info = "feet";
-    const SYMBOL: Info = "ft";
-}
+pub mod time {
+    use super::*;
+    #[derive(Debug)]
+    pub struct SecondBaseUnit;
+    impl BaseUnit for SecondBaseUnit {
+        type Dimension = TimeBaseDimension;
+        const MULTIPLIER: f64 = 1.0;
+    }
+    impl BaseUnitInfo for SecondBaseUnit {
+        const NAME: Info = "second";
+        const SYMBOL: Info = "s";
+    }
 
-#[derive(Debug)]
-pub struct SecondBaseUnit;
-impl BaseUnit for SecondBaseUnit {
-    type Dimension = TimeBaseDimension;
-    const MULTIPLIER: f64 = 1.0;
+    #[allow(dead_code)]
+    pub type MinuteBaseUnit = ScaledBaseUnit<SecondBaseUnit, 60>;
 }
-impl BaseUnitInfo for SecondBaseUnit {
-    const NAME: Info = "second";
-    const SYMBOL: Info = "s";
-}
-
-pub type MinuteBaseUnit = ScaledBaseUnit<SecondBaseUnit, 60>;
