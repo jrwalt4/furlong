@@ -1,13 +1,17 @@
 use std::marker::PhantomData as PD;
 
-use crate::base_unit::BaseUnit;
-use crate::base_dimension::{MassBaseDimension, LengthBaseDimension, TimeBaseDimension};
+use crate::base_dimension::{MassBaseDimension, LengthBaseDimension, TimeBaseDimension, BaseDimension};
 
-pub trait UnitSystem {
-    type Mass: BaseUnit<Dimension = MassBaseDimension>;
-    type Length: BaseUnit<Dimension = LengthBaseDimension>;
-    type Time: BaseUnit<Dimension = TimeBaseDimension>;
+pub trait UnitSystemPart<D: BaseDimension> {
+    type Base;
 }
+
+pub type GetBase<S, D> = <S as UnitSystemPart<D>>::Base;
+
+pub trait UnitSystem:
+    UnitSystemPart<MassBaseDimension> +
+    UnitSystemPart<LengthBaseDimension> +
+    UnitSystemPart<TimeBaseDimension> {}
 
 #[derive(Debug)]
 pub struct MakeSystem<MB, LB, TB> {
@@ -16,13 +20,16 @@ pub struct MakeSystem<MB, LB, TB> {
     time_base: PD<TB>,
 }
 
-impl<M, L, T> UnitSystem for MakeSystem<M, L, T>
-where
-    M: BaseUnit<Dimension = MassBaseDimension>,
-    L: BaseUnit<Dimension = LengthBaseDimension>,
-    T: BaseUnit<Dimension = TimeBaseDimension>,
-{
-    type Mass = M;
-    type Length = L;
-    type Time = T;
+impl<Mass, Length, Time> UnitSystemPart<MassBaseDimension> for MakeSystem<Mass, Length, Time> {
+    type Base = Mass;
 }
+
+impl<Mass, Length, Time> UnitSystemPart<LengthBaseDimension> for MakeSystem<Mass, Length, Time> {
+    type Base = Length;
+}
+
+impl<Mass, Length, Time> UnitSystemPart<TimeBaseDimension> for MakeSystem<Mass, Length, Time> {
+    type Base = Time;
+}
+
+impl<M, L, T> UnitSystem for MakeSystem<M, L, T> {}

@@ -2,8 +2,9 @@ use std::marker::PhantomData as PD;
 use std::ops::{Mul, Div};
 use typenum::{Integer, Prod, Quot};
 
+use crate::base_dimension::*;
 use crate::dimension::*;
-use crate::base_unit::{BaseUnitInfo, BaseUnitConversion}; 
+use crate::base_unit::*; 
 use crate::qnty::Qnty;
 use crate::unit_system::*;
 
@@ -12,14 +13,8 @@ pub trait Unit: Sized {
     type Dim: Dim;
 }
 
-pub(crate) type GetMassBase<U> = <<U as Unit>::System as UnitSystem>::Mass;
-pub(crate) type GetMassDim<U> = <<U as Unit>::Dim as Dim>::Mass;
-
-pub(crate) type GetLengthBase<U> = <<U as Unit>::System as UnitSystem>::Length;
-pub(crate) type GetLengthDim<U> = <<U as Unit>::Dim as Dim>::Length;
-
-pub(crate) type GetTimeBase<U> = <<U as Unit>::System as UnitSystem>::Time;
-pub(crate) type GetTimeDim<U> = <<U as Unit>::Dim as Dim>::Time;
+pub(crate) type GetUnitBase<U, D> = GetBase<<U as Unit>::System, D>;
+pub(crate) type GetUnitDim<U, D> = GetDim<<U as Unit>::Dim, D>;
 
 pub trait UnitInfo: Unit {
     fn abbr() -> String;
@@ -56,33 +51,33 @@ impl<S: UnitSystem, D: Dim> Unit for SystemUnit<S, D> {
 impl<S, D> UnitInfo for SystemUnit<S, D>
 where
     S: UnitSystem,
-    <S as UnitSystem>::Mass: BaseUnitInfo,
-    <S as UnitSystem>::Length: BaseUnitInfo,
-    <S as UnitSystem>::Time: BaseUnitInfo,
+    GetBase<S, MassBaseDimension>: BaseUnitInfo,
+    GetBase<S, LengthBaseDimension>: BaseUnitInfo,
+    GetBase<S, TimeBaseDimension>: BaseUnitInfo,
     D: Dim,
-    <D as Dim>::Mass: Integer,
-    <D as Dim>::Length: Integer,
-    <D as Dim>::Time: Integer,
+    GetDim<D, MassBaseDimension>: Integer,
+    GetDim<D, LengthBaseDimension>: Integer,
+    GetDim<D, TimeBaseDimension>: Integer,
 {
     fn abbr() -> String {
-        let mass_abbr = <<S as UnitSystem>::Mass as BaseUnitInfo>::SYMBOL;
-        let mass_pwr = <<D as Dim>::Mass as Integer>::I8;
+        let mass_abbr = <GetBase<S, MassBaseDimension> as BaseUnitInfo>::SYMBOL;
+        let mass_pwr = <GetDim<D, MassBaseDimension> as Integer>::I8;
         let mass_part = match mass_pwr {
             0 => String::from(""),
             1 => String::from(mass_abbr),
             _ => format!("{}^{}", mass_abbr, mass_pwr),
         };
 
-        let length_abbr = <<S as UnitSystem>::Length as BaseUnitInfo>::SYMBOL;
-        let length_pwr = <<D as Dim>::Length as Integer>::I8;
+        let length_abbr = <GetBase<S, LengthBaseDimension> as BaseUnitInfo>::SYMBOL;
+        let length_pwr = <GetDim<D, LengthBaseDimension> as Integer>::I8;
         let length_part = match length_pwr {
             0 => String::from(""),
             1 => String::from(length_abbr),
             _ => format!("{}^{}", length_abbr, length_pwr),
         };
 
-        let time_abbr = <<S as UnitSystem>::Time as BaseUnitInfo>::SYMBOL;
-        let time_pwr = <<D as Dim>::Time as Integer>::I8;
+        let time_abbr = <GetBase<S, TimeBaseDimension> as BaseUnitInfo>::SYMBOL;
+        let time_pwr = <GetDim<D, TimeBaseDimension> as Integer>::I8;
         let time_part = match time_pwr {
             0 => String::from(""),
             1 => String::from(time_abbr),
@@ -176,24 +171,24 @@ pub struct Conversion<From, To, T=f64>(PD<From>,PD<To>, PD<T>);
 impl<From, To: Unit> UnitConversion for Conversion<From, To>
 where
     From: Unit<Dim = To::Dim>,
-    GetMassBase<From>: BaseUnitConversion<GetMassBase<To>>,
-    GetMassDim<From>: typenum::Integer,
-    GetLengthBase<From>: BaseUnitConversion<GetLengthBase<To>>,
-    GetLengthDim<From>: typenum::Integer,
-    GetTimeBase<From>: BaseUnitConversion<GetTimeBase<To>>,
-    GetTimeDim<From>: typenum::Integer
+    GetUnitBase<From, MassBaseDimension>: BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>,
+    GetUnitDim<From, MassBaseDimension>: typenum::Integer,
+    GetUnitBase<From, LengthBaseDimension>: BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>,
+    GetUnitDim<From, LengthBaseDimension>: typenum::Integer,
+    GetUnitBase<From, TimeBaseDimension>: BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>,
+    GetUnitDim<From, TimeBaseDimension>: typenum::Integer
 {
     const FACTOR: f64 = 
     power_n!(
-        <GetMassBase<From> as BaseUnitConversion<GetMassBase<To>>>::FACTOR,
-        <GetMassDim<From> as typenum::Integer>::I32
+        <GetUnitBase<From, MassBaseDimension> as BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>>::FACTOR,
+        <GetUnitDim<From, MassBaseDimension> as typenum::Integer>::I32
     ) * 
     power_n!(
-        <GetLengthBase<From> as BaseUnitConversion<GetLengthBase<To>>>::FACTOR,
-        <GetLengthDim<From> as typenum::Integer>::I32
+        <GetUnitBase<From, LengthBaseDimension> as BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>>::FACTOR,
+        <GetUnitDim<From, LengthBaseDimension> as typenum::Integer>::I32
     ) *
     power_n!(
-        <GetTimeBase<From> as BaseUnitConversion<GetTimeBase<To>>>::FACTOR,
-        <GetTimeDim<From> as typenum::Integer>::I32
+        <GetUnitBase<From, TimeBaseDimension> as BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>>::FACTOR,
+        <GetUnitDim<From, TimeBaseDimension> as typenum::Integer>::I32
     );
 }

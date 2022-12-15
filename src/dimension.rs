@@ -2,20 +2,35 @@ use std::marker::PhantomData as PD;
 use std::ops::{Add, Sub, Mul, Div};
 use typenum::*;
 
-pub trait Dim {
-    type Mass;
-    type Length;
-    type Time;
+use crate::base_dimension::{BaseDimension, MassBaseDimension, LengthBaseDimension, TimeBaseDimension};
+
+pub trait DimPart<D: BaseDimension> {
+    type Exponent;
 }
+
+pub type GetDim<D, P> = <D as DimPart<P>>::Exponent;
+
+pub trait Dim:
+    DimPart<MassBaseDimension> +
+    DimPart<LengthBaseDimension> +
+    DimPart<TimeBaseDimension> {}
 
 #[derive(Debug)]
 pub struct Dimension<M, L, T>(PD<M>,PD<L>,PD<T>);
 
-impl<M, L, T> Dim for Dimension<M, L, T> {
-    type Mass = M;
-    type Length = L;
-    type Time = T;
+impl<M, L, T> DimPart<MassBaseDimension> for Dimension<M, L, T> {
+    type Exponent = M;
 }
+
+impl<M, L, T> DimPart<LengthBaseDimension> for Dimension<M, L, T> {
+    type Exponent = L;
+}
+
+impl<M, L, T> DimPart<TimeBaseDimension> for Dimension<M, L, T> {
+    type Exponent = T;
+}
+
+impl<M, L, T> Dim for Dimension<M, L, T> {}
 
 impl<M, L, T> Add for Dimension<M, L, T>
 {
@@ -58,8 +73,11 @@ where
 }
 
 pub type MassDimension = Dimension<P1, Z0, Z0>;
+
 pub type LengthDimension = Dimension<Z0, P1, Z0>;
-pub type AreaDimension = Dimension<Z0, P2, Z0>;
+pub type AreaDimension = Prod<LengthDimension, LengthDimension>;
+pub type VolumeDimension = Prod<LengthDimension, AreaDimension>;
+
 pub type TimeDimension = Dimension<Z0, Z0, P1>;
 
-
+pub type VelocityDimension = Quot<LengthDimension, TimeDimension>;
