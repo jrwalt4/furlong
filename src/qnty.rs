@@ -3,7 +3,7 @@ use std::marker::PhantomData as PD;
 use std::ops::{Add, AddAssign, Mul, Div, SubAssign, Sub};
 
 use typenum::{Prod, Quot};
-use num_traits::AsPrimitive;
+use num_traits::{Zero, One, AsPrimitive};
 
 use crate::dimension::*;
 use crate::unit::*;
@@ -180,5 +180,23 @@ impl<U: UnitInfo, T: Debug> Debug for Qnty<U, T> {
             .field("value", &self.value)
             .field("unit", &U::abbr())
             .finish()
+    }
+}
+
+impl<U, T: One> One for Qnty<U, T>
+where Self: Mul<Output = Self> {
+    fn one() -> Self {
+        Qnty::new(T::one())
+    }
+}
+
+impl<U, T: Zero> Zero for Qnty<U, T> 
+where Self: Add<Output = Self> {
+    fn zero() -> Self {
+        Self::new(T::zero())
+    }
+
+    fn is_zero(&self) -> bool {
+        self.value.is_zero()
     }
 }
