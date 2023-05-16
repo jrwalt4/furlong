@@ -27,144 +27,150 @@ impl<U, T: Clone> Clone for Qnty<U, T> {
 impl<U, T: Copy> Copy for Qnty<U, T> {}
 
 impl<U, T> Qnty<U, T> {
-    pub(crate) fn new(value: T) -> Qnty<U, T> {
+    /// Create a [`Qnty`] with the provided raw value. This 'raw_value' is the value
+    /// of the base unit in the [`System`](crate::unit_system::UnitSystem) associated with
+    /// this [`Unit`]. 
+    /// ```
+    /// # use furlong::{Qnty, system::si};
+    /// let length = Qnty::<si::Length>::from_raw_value(1.0);
+    /// assert_eq!(length.raw_value(), &1.0);
+    /// ```
+    pub fn from_raw_value(value: T) -> Qnty<U, T> {
         Qnty { value, unit: PD }
     }
 
-    pub fn value(&self) -> &T {
+    /// Returns a reference to the raw value of this [`Qnty`].
+    pub fn raw_value(&self) -> &T {
         &self.value
     }
 
-    pub fn as_type<T2>(self) -> Qnty<U, T2>
+    pub fn into_type<T2>(self) -> Qnty<U, T2>
     where
-        T2: 'static + Copy,
-        T: 'static + Copy + AsPrimitive<T2>
+        T: Into<T2>,
     {
-        Qnty::<U, T2>::new(self.value.as_())
+        Qnty::from_raw_value(self.value.into())
     }
 
-    pub fn as_unit<U2>(self) -> Qnty<U2, <T as Mul<f64>>::Output>
+    pub fn into_unit<U2>(self) -> Qnty<U2, T> 
     where
         Conversion<U, U2>: UnitConversion,
-        T: Mul<f64>
+        T: Convertible
     {
-        Qnty::<U2, <T as Mul<f64>>::Output>::new(self.value * Conversion::<U, U2>::SCALE)
+        Qnty::from_raw_value(self.value.convert::<Conversion<U, U2>>())
     }
-}
 
-pub trait IntoType<T> {
-
-}
-
-pub trait IntoUnit<U, T> {
-    fn into_unit(self) -> Qnty<U, T>;
-}
-
-impl<U1, T1, U2, T2> IntoUnit<U2, T2> for Qnty<U1, T1>
-where
-    Conversion<U1, U2>: UnitConversion,
-    T1: Mul<f64>,
-    <T1 as Mul<f64>>::Output: Into<T2>
-{
-    fn into_unit(self) -> Qnty<U2, T2>{
-        Qnty::<U2, T2>::new((self.value * Conversion::<U1, U2>::SCALE).into())
+    pub fn as_type<T2: 'static + Copy>(self) -> Qnty<U, T2>
+    where 
+        T: AsPrimitive<T2>
+    {
+        Qnty::from_raw_value(self.value.as_())
     }
+
+    pub fn as_unit<U2>(self) -> Qnty<U2, T>
+    where
+        U: Unit,
+        U2: Unit<System = U::System>
+    {
+        // same system, so no need to convert the value
+        Qnty::from_raw_value(self.value)
+    }
+
 }
 
-impl<U1, T1, U2, T2> Into<Qnty<U2, T2>> for &Qnty<U1, T1>
-where
-    Qnty<U1, T1>: IntoUnit<U2, T2>,
-    Qnty<U1, T1>: Copy
-{
-    fn into(self) -> Qnty<U2, T2> {
-        self.into_unit()
+impl<S: UnitSystem, D: Dim, T> From<T> for Qnty<SystemUnit<S, D>, T> {
+    fn from(value: T) -> Self {
+        Qnty::from_raw_value(value)
     }
 }
 
 impl<Ul, Tl, Ur, Tr> PartialEq<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
     Conversion<Ur, Ul>: UnitConversion,
-    Tr: Mul<f64> + Copy,
-    Tl: PartialEq<<Tr as Mul<f64>>::Output>,
+    Tl: UnitEq<Tr>,
 {
     fn eq(&self, other: &Qnty<Ur, Tr>) -> bool {
-        self.value == *other.value() * Conversion::<Ur, Ul>::SCALE
+        self.value.eq::<Conversion::<Ur, Ul>>(other.raw_value())
     }
 }
 
 impl<Ul, Tl, Ur, Tr> Add<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Conversion<Ur, Ul>: UnitConversion,
-    Tr: Mul<f64>,
-    Tl: Add<<Tr as Mul<f64>>::Output>
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: SameDimension<<Ur as Unit>::Dim>,
+    Tl: Add<Tr>
 {
-    type Output = Qnty<Ul, <Tl as Add<<Tr as Mul<f64>>::Output>>::Output>;
+    type Output = Qnty<Ul, <Tl as Add<Tr>>::Output>;
     fn add(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
-        Self::Output::new(self.value + rhs.as_unit::<Ul>().value)
+        Qnty::from_raw_value(self.value + rhs.value)
     }
 }
 
 impl<Ul, Tl, Ur, Tr> AddAssign<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Conversion<Ur, Ul>: UnitConversion,
-    Tr: Mul<f64>,
-    Tl: AddAssign<<Tr as Mul<f64>>::Output>
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: SameDimension<<Ur as Unit>::Dim>,
+    Tl: AddAssign<Tr>
 {
     fn add_assign(&mut self, rhs: Qnty<Ur, Tr>) {
-        self.value += rhs.as_unit().value;
+        self.value += rhs.value;
     }
 }
 
-impl<Ul, Tl, Ur, Tr> Sub<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
+impl<Ul: Unit, Tl, Ur: Unit, Tr> Sub<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Qnty<Ur, Tr>: IntoUnit<Ul, Tl>,
-    Tl: SubAssign
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: SameDimension<<Ur as Unit>::Dim>,
+    Tl: Sub<Tr>
 {
-    type Output = Qnty<Ul, Tl>;
-    fn sub(mut self, rhs: Qnty<Ur, Tr>) -> Self::Output {
-        self -= rhs;
-        self
+    type Output = Qnty<Ul, <Tl as Sub<Tr>>::Output>;
+    fn sub(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
+        Qnty::from_raw_value(self.value - rhs.value)
     }
 }
 
-impl<Ul, Tl, Ur, Tr> SubAssign<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
+impl<Ul, T, Ur> SubAssign<Qnty<Ur, T>> for Qnty<Ul, T>
 where
-    Qnty<Ur, Tr>: IntoUnit<Ul, Tl>,
-    Tl: SubAssign
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: SameDimension<<Ur as Unit>::Dim>,
+    T: SubAssign
 {
-    fn sub_assign(&mut self, rhs: Qnty<Ur, Tr>) {
-        self.value -= rhs.into_unit().value;
+    fn sub_assign(&mut self, rhs: Qnty<Ur, T>) {
+        self.value -= rhs.value;
     }
 }
 
-impl<S: UnitSystem, D: Dim, Tl, Ur, Tr> Mul<Qnty<Ur, Tr>> for Qnty<SystemUnit<S, D>, Tl>
+impl<Ul, Tl, Ur, Tr> Mul<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Ur: Unit,
-    D: Mul<<Ur as Unit>::Dim>,
-    Prod<D, <Ur as Unit>::Dim>: Dim,
-    Qnty<Ur, Tr>: IntoUnit<SystemUnit<S, Ur::Dim>, Tl>,
-    Tl: Mul<Output = Tl>
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: Mul<<Ur as Unit>::Dim>,
+    Prod<<Ul as Unit>::Dim, <Ur as Unit>::Dim>: Dim,
+    Tl: Mul<Tr>
 {
-    type Output = Qnty<SystemUnit<S, Prod<D, Ur::Dim>>, Tl>;
+    type Output = Qnty<SystemUnit<<Ul as Unit>::System, Prod<<Ul as Unit>::Dim, Ur::Dim>>, <Tl as Mul<Tr>>::Output>;
     fn mul(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
-        Self::Output::new(
+        Self::Output::from_raw_value(
             self.value * 
-            rhs.into_unit().value
+            rhs.value
         )
     }
 }
 
-impl<S: UnitSystem, D: Dim, Tl, Ur, Tr> Div<Qnty<Ur, Tr>> for Qnty<SystemUnit<S, D>, Tl>
+impl<Ul, Tl, Ur, Tr> Div<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Ur: Unit,
-    D: Div<<Ur as Unit>::Dim>,
-    Quot<D, <Ur as Unit>::Dim>: Dim,
-    Qnty<Ur, Tr>: IntoUnit<SystemUnit<S, Ur::Dim>, Tl>,
-    Tl: Div<Output = Tl>
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: Div<<Ur as Unit>::Dim>,
+    Quot<<Ul as Unit>::Dim, <Ur as Unit>::Dim>: Dim,
+    Tl: Div<Tr>
 {
-    type Output = Qnty<SystemUnit<S, Quot<D, Ur::Dim>>, Tl>;
+    type Output = Qnty<SystemUnit<Ul::System, Quot<Ul::Dim, Ur::Dim>>, <Tl as Div<Tr>>::Output>;
     fn div(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
-        Self::Output::new( self.value / rhs.into_unit().value )
+        Self::Output::from_raw_value( self.value / rhs.value )
     }
 }
 
@@ -183,17 +189,18 @@ impl<U: UnitInfo, T: Debug> Debug for Qnty<U, T> {
     }
 }
 
-impl<U, T: One> One for Qnty<U, T>
+/// Only if it's a [`SystemUnit`] does 1 have a raw_value == 1
+impl<S: UnitSystem, D: Dim, T: One> One for Qnty<SystemUnit<S, D>, T>
 where Self: Mul<Output = Self> {
     fn one() -> Self {
-        Qnty::new(T::one())
+        Qnty::from_raw_value(T::one())
     }
 }
 
 impl<U, T: Zero> Zero for Qnty<U, T> 
 where Self: Add<Output = Self> {
     fn zero() -> Self {
-        Self::new(T::zero())
+        Self::from_raw_value(T::zero())
     }
 
     fn is_zero(&self) -> bool {

@@ -1,5 +1,6 @@
 use std::marker::PhantomData as PD;
 use std::ops::{Mul, Div};
+use std::cmp::{PartialEq, PartialOrd, Ordering};
 use typenum::{Integer, Prod, Quot};
 
 use crate::base_dimension::*;
@@ -20,7 +21,7 @@ pub trait UnitInfo: Unit {
     fn abbr() -> String;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct SystemUnit<S: UnitSystem, D: Dim> {
     system: PD<S>,
     dimension: PD<D>,
@@ -28,7 +29,7 @@ pub struct SystemUnit<S: UnitSystem, D: Dim> {
 
 impl<S: UnitSystem, D: Dim> SystemUnit<S, D> {
     pub fn new<T>(value: T) -> Qnty<Self, T> {
-        Qnty::new(value)
+        Qnty::from_raw_value(value)
     }
 }
 
@@ -163,3 +164,47 @@ where
         <GetUnitDim<From, TimeBaseDimension> as typenum::Integer>::I32
     );
 }
+
+/// A value that can apply a conversion factor
+pub trait Convertible: Sized {
+    fn convert<C: UnitConversion>(&self) -> Self;
+
+    /// in place conversion
+    fn convert_mut<C: UnitConversion>(&mut self) {
+        *self = self.convert::<C>();
+    }
+}
+
+pub trait UnitOrd<Rhs = Self> {
+    fn cmp<C: UnitConversion>(&self, other: &Rhs) -> Option<Ordering>;
+}
+
+pub trait UnitEq<Rhs = Self> {
+    fn eq<C: UnitConversion>(&self, other: &Rhs) -> bool;
+}
+
+macro_rules! impl_conv_float {
+    ($T:ty) => {
+        impl Convertible for $T {
+            fn convert<C: UnitConversion>(&self) -> Self {
+                (*self as f64 * C::SCALE) as Self
+            }
+        }
+        impl<U: PartialOrd<$T>> UnitOrd<U> for $T {
+            fn cmp<C: UnitConversion>(&self, other: &U) -> Option<Ordering> {
+                other.partial_cmp(&((*self as f64 * <C as UnitConversion>::SCALE) as $T))
+            }
+        }
+        impl<U: PartialEq<$T>> UnitEq<U> for $T {
+            fn eq<C: UnitConversion>(&self, other: &U) -> bool {
+                other.eq(&((*self as f64 * <C as UnitConversion>::SCALE) as $T))
+            }
+        }
+    };
+    ($T:ty, $($Ts:ty),+) => {
+        impl_conv_float!{$T}
+        impl_conv_float!{$($Ts),+}
+    }
+}
+
+impl_conv_float!{f32, f64, u32, i32, u64, i64}

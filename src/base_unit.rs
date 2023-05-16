@@ -92,7 +92,7 @@ pub mod mass {
         const SCALE: f64 = 14590.0;
     }
     impl BaseUnitTagConversion<SlugBaseUnit> for GramBaseUnit {
-        const SCALE: f64 = 1.0 / 14590.0;
+        const SCALE: f64 = 6.85218e-5;
     }
     impl BaseUnitInfo for SlugBaseUnit {
         const NAME: Info = "slug";
@@ -133,7 +133,7 @@ pub mod length {
     }
 
     impl BaseUnitTagConversion<YardBaseUnit> for MeterBaseUnit {
-        const SCALE: f64 = 1.0 / 0.9144;
+        const SCALE: f64 = 1.0936132983;
     }
 
     pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, 1, 3>;
