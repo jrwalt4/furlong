@@ -27,7 +27,7 @@ impl<U, T: Clone> Clone for Qnty<U, T> {
 impl<U, T: Copy> Copy for Qnty<U, T> {}
 
 impl<U, T> Qnty<U, T> {
-    pub fn new(value: T) -> Qnty<U, T> {
+    pub(crate) fn new(value: T) -> Qnty<U, T> {
         Qnty { value, unit: PD }
     }
 
@@ -48,7 +48,7 @@ impl<U, T> Qnty<U, T> {
         Conversion<U, U2>: UnitConversion,
         T: Mul<f64>
     {
-        Qnty::<U2, <T as Mul<f64>>::Output>::new(self.value * Conversion::<U, U2>::FACTOR)
+        Qnty::<U2, <T as Mul<f64>>::Output>::new(self.value * Conversion::<U, U2>::SCALE)
     }
 }
 
@@ -67,7 +67,7 @@ where
     <T1 as Mul<f64>>::Output: Into<T2>
 {
     fn into_unit(self) -> Qnty<U2, T2>{
-        Qnty::<U2, T2>::new((self.value * Conversion::<U1, U2>::FACTOR).into())
+        Qnty::<U2, T2>::new((self.value * Conversion::<U1, U2>::SCALE).into())
     }
 }
 
@@ -88,7 +88,7 @@ where
     Tl: PartialEq<<Tr as Mul<f64>>::Output>,
 {
     fn eq(&self, other: &Qnty<Ur, Tr>) -> bool {
-        self.value == *other.value() * Conversion::<Ur, Ul>::FACTOR
+        self.value == *other.value() * Conversion::<Ur, Ul>::SCALE
     }
 }
 

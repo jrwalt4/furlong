@@ -20,7 +20,6 @@ pub mod si {
         time::SecondBaseUnit
     >;
     export_base_units!(System);
-    pub const METERS: Length = Length::new();
 }
 
 pub mod imperial {
@@ -32,5 +31,4 @@ pub mod imperial {
         time::SecondBaseUnit
     >;
     export_base_units!(System);
-    pub const FEET: Length = Length::new();
 }

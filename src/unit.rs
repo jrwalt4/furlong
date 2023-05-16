@@ -27,21 +27,10 @@ pub struct SystemUnit<S: UnitSystem, D: Dim> {
 }
 
 impl<S: UnitSystem, D: Dim> SystemUnit<S, D> {
-    pub const fn new() -> Self {
-        Self {
-            system: PD,
-            dimension: PD,
-        }
+    pub fn new<T>(value: T) -> Qnty<Self, T> {
+        Qnty::new(value)
     }
 }
-
-impl<S: UnitSystem, D: Dim> Clone for SystemUnit<S, D> {
-    fn clone(&self) -> Self {
-        SystemUnit::new()
-    }
-}
-
-impl<S: UnitSystem, D: Dim> Copy for SystemUnit<S, D> {}
 
 impl<S: UnitSystem, D: Dim> Unit for SystemUnit<S, D> {
     type System = S;
@@ -111,28 +100,8 @@ where
     }
 }
 
-macro_rules! impl_shorthand_ctor {
-    ($($T:ty)*) => {
-        $(
-            impl<S: UnitSystem, D: Dim> Mul<SystemUnit<S, D>> for $T {
-                type Output = Qnty<SystemUnit<S, D>, $T>;
-                fn mul(self, _unit: SystemUnit<S, D>) -> Self::Output {
-                    Qnty::<SystemUnit<S, D>, $T>::new(self)
-                }
-            }
-        )*
-    };
-}
-
-impl_shorthand_ctor!(f32 f64 i32);
-
-pub trait UnitConversion<T = f64> {
-    const FACTOR: T;
-
-    fn convert(value: T) -> <T as Mul>::Output
-    where T: Mul {
-        value * Self::FACTOR
-    }
+pub trait UnitConversion {
+    const SCALE: f64;
 }
 
 macro_rules! power_n {
@@ -168,9 +137,11 @@ macro_rules! power_n {
 
 pub struct Conversion<From, To, T=f64>(PD<From>,PD<To>, PD<T>);
 
-impl<From, To: Unit> UnitConversion for Conversion<From, To>
+impl<From, To> UnitConversion for Conversion<From, To>
 where
-    From: Unit<Dim = To::Dim>,
+    To: Unit,
+    From: Unit,
+    <From as Unit>::Dim: SameDimension<<To as Unit>::Dim>,
     GetUnitBase<From, MassBaseDimension>: BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>,
     GetUnitDim<From, MassBaseDimension>: typenum::Integer,
     GetUnitBase<From, LengthBaseDimension>: BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>,
@@ -178,17 +149,17 @@ where
     GetUnitBase<From, TimeBaseDimension>: BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>,
     GetUnitDim<From, TimeBaseDimension>: typenum::Integer
 {
-    const FACTOR: f64 = 
+    const SCALE: f64 = 
     power_n!(
-        <GetUnitBase<From, MassBaseDimension> as BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>>::FACTOR,
+        <GetUnitBase<From, MassBaseDimension> as BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>>::SCALE,
         <GetUnitDim<From, MassBaseDimension> as typenum::Integer>::I32
     ) * 
     power_n!(
-        <GetUnitBase<From, LengthBaseDimension> as BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>>::FACTOR,
+        <GetUnitBase<From, LengthBaseDimension> as BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>>::SCALE,
         <GetUnitDim<From, LengthBaseDimension> as typenum::Integer>::I32
     ) *
     power_n!(
-        <GetUnitBase<From, TimeBaseDimension> as BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>>::FACTOR,
+        <GetUnitBase<From, TimeBaseDimension> as BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>>::SCALE,
         <GetUnitDim<From, TimeBaseDimension> as typenum::Integer>::I32
     );
 }

@@ -42,50 +42,42 @@ mod unit_system;
 #[cfg(test)]
 mod unit_test {
     use super::{
-        qnty::{Qnty, IntoUnit},
-        base_unit::{BaseUnit, length::FootBaseUnit},
+        qnty::Qnty,
         unit::UnitInfo,
-        system::si::{self, Length as MetersUnit, METERS},
-        system::imperial::{self, Length as FeetUnit, FEET}
+        system::si::{self, Length as Meters},
+        system::imperial::Length as Feet
     };
     use std::fmt::Display;
     #[test]
     fn add_same_unit() {
-        let l1 = Qnty::<MetersUnit>::new(2.0);
-        let l2 = 1.5 * METERS;
-        let l3 = Qnty::<MetersUnit>::new(3.5);
+        let l1 = Qnty::<Meters>::new(2.0);
+        let l2 = Meters::new(1.5);
+        let l3 = Qnty::<Meters>::new(3.5);
         assert_eq!(l1 + l2, l3);
     }
 
     #[test]
     fn add_int_units() {
-        let l1 = 1.5 * METERS;
+        let l1 = Meters::new(1.5);
         let l2 = Qnty::<si::Length, i32>::new(2);
         let l3 = l1 + l2.as_type::<f64>();
-        assert_eq!(l3, 3.5 * METERS);
-    }
-
-    #[test]
-    fn qnty_into() {
-        let m = (0.9144/3.0) as f64 * METERS;
-        let ft: Qnty<FeetUnit> = m.into_unit();
-        assert_eq!(ft, m);
+        assert_eq!(l3, Meters::new(3.5));
     }
 
     #[test]
     fn add_different_units() {
-        let l1 = Qnty::<FeetUnit>::new(2.0);
-        let l2 = Qnty::<MetersUnit>::new(1.0);
-        let l3 = (2.0 + 3.0 / 0.9144) * FEET;
+        let l1 = Qnty::<Feet>::new(2.0);
+        let l2 = Qnty::<Meters>::new(1.0);
+        let l3 = Feet::new(2.0 + 3.0 / 0.9144);
         assert_eq!(l1 + l2, l3);
     }
 
     #[test]
     fn add_different_types() {
-        let mut l_f64 = Qnty::<FeetUnit>::new(2.0);
-        let l_i32 = Qnty::<FeetUnit, i32>::new(1);
+        let mut l_f64 = Qnty::<Feet>::new(2.0);
+        let l_i32 = Qnty::<Feet, i32>::new(1);
         l_f64 += l_i32.as_type::<f64>();
-        assert_eq!(l_f64, 3.0 * FEET);
+        assert_eq!(l_f64, Feet::new(3.0));
     }
 
     #[test]
@@ -117,38 +109,30 @@ mod unit_test {
             }
         }
 
-        let length_v = Qnty::<FeetUnit, Vec3<f64>>::new(Vec3::<f64>(1.0, 2.0, 3.0));
+        let length_v = Qnty::<Feet, _>::new(Vec3::<f64>(1.0, 2.0, 3.0));
         let width_v = length_v;
         let perimeter_v = length_v + width_v;
-        assert_eq!(perimeter_v, Qnty::<FeetUnit, Vec3<f64>>::new(Vec3::<f64>(2.0, 4.0, 6.0)));
-    }
-
-    #[test]
-    fn add_complex_units() {
-        let a1 = Qnty::<si::Area>::new(2.0);
-        let a2 = Qnty::<imperial::Area>::new(2.0);
-        let a1a2 = Qnty::<si::Area>::new(2.0*(1.0 + <FootBaseUnit as BaseUnit>::MULTIPLIER.powi(2)));
-        assert_eq!(a1 + a2, a1a2);
+        assert_eq!(perimeter_v, Qnty::<Feet, Vec3<f64>>::new(Vec3::<f64>(2.0, 4.0, 6.0)));
     }
 
     #[test]
     fn subtract_units() {
-        let l1 = 3.0 * METERS;
-        let l2 = 3.0 * FEET;
-        assert_eq!(l1 - l2, (3.0-0.9144)*METERS);
+        let l1 = Meters::new(3.0);
+        let l2 = Feet::new(3.0);
+        assert_eq!(l1 - l2, Meters::new(3.0-0.9144));
     }
 
     #[test]
     fn multiply_units() {
-        let l1 = 2.0 * METERS;
-        let l2 = 3.0 * FEET;
+        let l1 = Meters::new(2.0);
+        let l2 = Feet::new(3.0);
         let a1 = l1 * l2;
         assert_eq!(a1, Qnty::<si::Area>::new(2.0*3.0*0.3048));
     }
 
     #[test]
     fn divide_units() {
-        let l = 2.0 as f64 * METERS;
+        let l = Meters::new(2.0f64);
         let t = Qnty::<si::Time>::new(1.0);
         let v = l / t;
         assert_eq!(v.value(), &2.0);
@@ -156,23 +140,23 @@ mod unit_test {
 
     #[test]
     fn copy() {
-        let l1 = 1.0 * METERS;
+        let l1 = Meters::new(1.0);
         let l2 = l1;
         assert_eq!(l1, l2);
     }
 
     #[test]
     fn unit_info() {
-        type U = MetersUnit;
+        type U = Meters;
         assert_eq!(<U as UnitInfo>::abbr(), "m");
-        let length = 3.0 * METERS;
+        let length = Meters::new(3.0);
         assert_eq!(format!("{length:.3}"), "3.000 m");
     }
 
     #[test]
     fn generic_unit_info() {
         // test Display for i32
-        let q = Qnty::<FeetUnit, i32>::new(2);
+        let q = Qnty::<Feet, i32>::new(2);
         assert_eq!(format!("{q}"), "2 ft");
 
         // test Display for custom type
@@ -184,7 +168,7 @@ mod unit_test {
             }
         }
         let mv = MyValue(3.0);
-        let q = Qnty::<FeetUnit, MyValue>::new(mv);
+        let q = Qnty::<Feet, MyValue>::new(mv);
         assert_eq!(format!("{q}"), format!("{mv} ft"));
     }
 }

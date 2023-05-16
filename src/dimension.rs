@@ -32,10 +32,19 @@ impl<M, L, T> DimPart<TimeBaseDimension> for Dimension<M, L, T> {
 
 impl<M, L, T> Dim for Dimension<M, L, T> {}
 
-impl<M, L, T> Add for Dimension<M, L, T>
-{
+pub trait SameDimension<D> {}
+
+impl<D1: Dim, D2: Dim> SameDimension<D2> for D1
+where
+    D1: DimPart<MassBaseDimension, Exponent = <D2 as DimPart<MassBaseDimension>>::Exponent>,
+    D1: DimPart<LengthBaseDimension, Exponent = <D2 as DimPart<LengthBaseDimension>>::Exponent>,
+    D1: DimPart<TimeBaseDimension, Exponent = <D2 as DimPart<TimeBaseDimension>>::Exponent>,
+{}
+
+/// If we define with [`SameDimension`] then custom types that implement Dim can be used as well
+impl<M, L, T, Other: SameDimension<Dimension<M, L, T>>> Add<Other> for Dimension<M, L, T> {
     type Output = Self;
-    fn add(self, _rhs: Self) -> Self::Output {
+    fn add(self, _rhs: Other) -> Self::Output {
         unimplemented!()
     }
 }
