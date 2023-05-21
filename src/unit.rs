@@ -14,9 +14,6 @@ pub trait Unit: Sized {
     type Dim: Dim;
 }
 
-pub(crate) type GetUnitBase<U, D> = GetBase<<U as Unit>::System, D>;
-pub(crate) type GetUnitDim<U, D> = GetDim<<U as Unit>::Dim, D>;
-
 pub trait UnitInfo: Unit {
     fn abbr() -> String;
 }
@@ -101,6 +98,21 @@ where
     }
 }
 
+pub struct ScaledUnit<U, const NUM: u32, const DEN: u32 = 1> {
+    unit: PD<U>
+}
+
+impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> Unit for ScaledUnit<SystemUnit<S, D>, NUM, DEN> {
+    type System = S;
+    type Dim = D;
+}
+
+impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> ScaledUnit<SystemUnit<S, D>, NUM, DEN> {
+    pub fn new<T: Convertible>(value: T) -> Qnty<Self, T> {
+        Qnty::from_raw_value(value.convert::<Conversion<Self, SystemUnit<S, D>>>())
+    }
+}
+
 pub trait UnitConversion {
     const SCALE: f64;
 }
@@ -138,31 +150,43 @@ macro_rules! power_n {
 
 pub struct Conversion<From, To, T=f64>(PD<From>,PD<To>, PD<T>);
 
-impl<From, To> UnitConversion for Conversion<From, To>
+impl<Sys1, Dim1, Sys2, Dim2> UnitConversion for Conversion<SystemUnit<Sys1, Dim1>, SystemUnit<Sys2, Dim2>>
 where
-    To: Unit,
-    From: Unit,
-    <From as Unit>::Dim: SameDimension<<To as Unit>::Dim>,
-    GetUnitBase<From, MassBaseDimension>: BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>,
-    GetUnitDim<From, MassBaseDimension>: typenum::Integer,
-    GetUnitBase<From, LengthBaseDimension>: BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>,
-    GetUnitDim<From, LengthBaseDimension>: typenum::Integer,
-    GetUnitBase<From, TimeBaseDimension>: BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>,
-    GetUnitDim<From, TimeBaseDimension>: typenum::Integer
+    Sys1: UnitSystem,
+    Dim1: Dim,
+    Sys2: UnitSystem,
+    Dim2: Dim,
+    Dim1: SameDimension<Dim2>,
+    GetBase<Sys1, MassBaseDimension>: BaseUnitConversion<GetBase<Sys2, MassBaseDimension>>,
+    GetDim<Dim1, MassBaseDimension>: typenum::Integer,
+    GetBase<Sys1, LengthBaseDimension>: BaseUnitConversion<GetBase<Sys2, LengthBaseDimension>>,
+    GetDim<Dim1, LengthBaseDimension>: typenum::Integer,
+    GetBase<Sys1, TimeBaseDimension>: BaseUnitConversion<GetBase<Sys2, TimeBaseDimension>>,
+    GetDim<Dim1, TimeBaseDimension>: typenum::Integer,
 {
     const SCALE: f64 = 
     power_n!(
-        <GetUnitBase<From, MassBaseDimension> as BaseUnitConversion<GetUnitBase<To, MassBaseDimension>>>::SCALE,
-        <GetUnitDim<From, MassBaseDimension> as typenum::Integer>::I32
+        <GetBase<Sys1, MassBaseDimension> as BaseUnitConversion<GetBase<Sys2, MassBaseDimension>>>::SCALE,
+        <GetDim<Dim1, MassBaseDimension> as typenum::Integer>::I32
     ) * 
     power_n!(
-        <GetUnitBase<From, LengthBaseDimension> as BaseUnitConversion<GetUnitBase<To, LengthBaseDimension>>>::SCALE,
-        <GetUnitDim<From, LengthBaseDimension> as typenum::Integer>::I32
+        <GetBase<Sys1, LengthBaseDimension> as BaseUnitConversion<GetBase<Sys2, LengthBaseDimension>>>::SCALE,
+        <GetDim<Dim1, LengthBaseDimension> as typenum::Integer>::I32
     ) *
     power_n!(
-        <GetUnitBase<From, TimeBaseDimension> as BaseUnitConversion<GetUnitBase<To, TimeBaseDimension>>>::SCALE,
-        <GetUnitDim<From, TimeBaseDimension> as typenum::Integer>::I32
+        <GetBase<Sys1, TimeBaseDimension> as BaseUnitConversion<GetBase<Sys2, TimeBaseDimension>>>::SCALE,
+        <GetDim<Dim1, TimeBaseDimension> as typenum::Integer>::I32
     );
+}
+
+impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> UnitConversion 
+for Conversion<ScaledUnit<SystemUnit<S, D>, NUM, DEN>, SystemUnit<S, D>> {
+    const SCALE: f64 = NUM as f64 / DEN as f64;
+}
+
+impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> UnitConversion 
+for Conversion<SystemUnit<S, D>, ScaledUnit<SystemUnit<S, D>, NUM, DEN>> {
+    const SCALE: f64 = DEN as f64 / NUM as f64;
 }
 
 /// A value that can apply a conversion factor

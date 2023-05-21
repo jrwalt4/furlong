@@ -207,3 +207,23 @@ where Self: Add<Output = Self> {
         self.value.is_zero()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::system::{si, imperial};
+
+    #[test]
+    fn scaled_units() {
+        let one_km = si::Kilometer::new(1.0);
+        assert_eq!(one_km.raw_value(), &1_000.0);
+
+        let one_yd = imperial::Yard::new(1.0);
+        assert_eq!(one_yd.raw_value(), &3.0);
+
+        let one_km_i = si::Kilometer::new(1);
+        assert_eq!(one_km_i.raw_value(), &1_000);
+
+        let one_yd_i = imperial::Yard::new(1);
+        assert_eq!(one_yd_i.raw_value(), &3);
+    }
+}
