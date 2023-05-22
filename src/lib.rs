@@ -32,7 +32,6 @@ mod unit_system;
 
 #[cfg(test)]
 mod unit_test {
-    use crate::unit::{UnitEq, UnitConversion};
 
     use super::{
         qnty::Qnty,
@@ -77,7 +76,7 @@ mod unit_test {
     fn with_vectors() {
         use std::ops::{Mul, Add};
 
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone, Copy, PartialEq)]
         struct Vec3<T>(T, T, T);
 
         impl<T: Mul<f64, Output = T>> Mul<f64> for Vec3<T> {
@@ -91,14 +90,6 @@ mod unit_test {
             type Output = Vec3<<T as Add<T2>>::Output>;
             fn add(self, rhs: Vec3<T2>) -> Self::Output {
                 Vec3(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-            }
-        }
-
-        impl<T: UnitEq> UnitEq for Vec3<T> {
-            fn eq<C: UnitConversion>(&self, other: &Self) -> bool {
-                UnitEq::eq::<C>(&self.0, &other.0) &&
-                UnitEq::eq::<C>(&self.1, &other.1) &&
-                UnitEq::eq::<C>(&self.2, &other.2)
             }
         }
 

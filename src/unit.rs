@@ -1,6 +1,5 @@
 use std::marker::PhantomData as PD;
 use std::ops::{Mul, Div};
-use std::cmp::{PartialEq, PartialOrd, Ordering};
 use typenum::{Integer, Prod, Quot};
 
 use crate::base_dimension::*;
@@ -98,18 +97,21 @@ where
     }
 }
 
+pub type GetSystemUnit<U> = SystemUnit<<U as Unit>::System, <U as Unit>::Dim>;
+
 pub struct ScaledUnit<U, const NUM: u32, const DEN: u32 = 1> {
     unit: PD<U>
 }
 
-impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> Unit for ScaledUnit<SystemUnit<S, D>, NUM, DEN> {
-    type System = S;
-    type Dim = D;
+impl<U: Unit, const NUM: u32, const DEN: u32> Unit for ScaledUnit<U, NUM, DEN> {
+    type System = <U as Unit>::System;
+    type Dim = <U as Unit>::Dim;
 }
 
-impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> ScaledUnit<SystemUnit<S, D>, NUM, DEN> {
-    pub fn new<T: Convertible>(value: T) -> Qnty<Self, T> {
-        Qnty::from_raw_value(value.convert::<Conversion<Self, SystemUnit<S, D>>>())
+impl<U: Unit, const NUM: u32, const DEN: u32> ScaledUnit<U, NUM, DEN> {
+    pub fn new<T: Convertible>(value: T) -> Qnty<Self, T> 
+    where Conversion<U, GetSystemUnit<U>>: UnitConversion {
+        Qnty::from_raw_value(value.convert::<Conversion<Self, GetSystemUnit<U>>>())
     }
 }
 
@@ -150,6 +152,7 @@ macro_rules! power_n {
 
 pub struct Conversion<From, To, T=f64>(PD<From>,PD<To>, PD<T>);
 
+/// Convert between base units of different systems
 impl<Sys1, Dim1, Sys2, Dim2> UnitConversion for Conversion<SystemUnit<Sys1, Dim1>, SystemUnit<Sys2, Dim2>>
 where
     Sys1: UnitSystem,
@@ -179,15 +182,45 @@ where
     );
 }
 
-impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> UnitConversion 
-for Conversion<ScaledUnit<SystemUnit<S, D>, NUM, DEN>, SystemUnit<S, D>> {
-    const SCALE: f64 = NUM as f64 / DEN as f64;
+/// Convert from a scaled unit to the base unit of that system (used with `Unit::new()`)
+impl<U: Unit, const NUM: u32, const DEN: u32> UnitConversion 
+for Conversion<ScaledUnit<U, NUM, DEN>, GetSystemUnit<U>>
+where 
+    Conversion<U, GetSystemUnit<U>>: UnitConversion
+{
+    const SCALE: f64 = NUM as f64 / DEN as f64 * Conversion::<U, GetSystemUnit<U>>::SCALE;
 }
 
-impl<S: UnitSystem, D: Dim, const NUM: u32, const DEN: u32> UnitConversion 
-for Conversion<SystemUnit<S, D>, ScaledUnit<SystemUnit<S, D>, NUM, DEN>> {
-    const SCALE: f64 = DEN as f64 / NUM as f64;
+/// Convert from the base unit of system to a scaled unit (used with [`Qnty::value`])
+impl<U: Unit, const NUM: u32, const DEN: u32> UnitConversion 
+for Conversion<GetSystemUnit<U>, ScaledUnit<U, NUM, DEN>>
+where 
+    Conversion<GetSystemUnit<U>, U>: UnitConversion
+{
+    const SCALE: f64 = DEN as f64 / NUM as f64 * Conversion::<GetSystemUnit<U>, U>::SCALE;
 }
+
+/// Convert between scaled units
+impl<U1, const NUM1: u32, const DEN1: u32,
+     U2, const NUM2: u32, const DEN2: u32> UnitConversion 
+for Conversion<ScaledUnit<U1, NUM1, DEN1>, ScaledUnit<U2, NUM2, DEN2>>
+where
+    Conversion<U1, U2>: UnitConversion
+{
+    const SCALE: f64 = NUM1 as f64 / DEN1 as f64
+                    * Conversion::<U1, U2>::SCALE
+                    * DEN2 as f64 / NUM2 as f64;
+}
+
+// impl<S1: UnitSystem, D1: Dim, const NUM1: u32, const DEN1: u32,
+//      S2: UnitSystem, D2: Dim, const NUM2: u32, const DEN2: u32> UnitConversion 
+// for Conversion<ScaledUnit<SystemUnit<S1, D1>, NUM1, DEN1>, ScaledUnit<SystemUnit<S2, D2>, NUM2, DEN2>>
+// where
+//     Conversion<SystemUnit<S1, D1>, SystemUnit<S2, D2>>: UnitConversion {
+//     const SCALE: f64 = NUM1 as f64 / DEN1 as f64
+//                     * Conversion::<SystemUnit<S1, D1>, SystemUnit<S2, D2>>::SCALE
+//                     * DEN2 as f64 / NUM2 as f64;
+// }
 
 /// A value that can apply a conversion factor
 pub trait Convertible: Sized {
@@ -199,29 +232,11 @@ pub trait Convertible: Sized {
     }
 }
 
-pub trait UnitOrd<Rhs = Self> {
-    fn cmp<C: UnitConversion>(&self, other: &Rhs) -> Option<Ordering>;
-}
-
-pub trait UnitEq<Rhs = Self> {
-    fn eq<C: UnitConversion>(&self, other: &Rhs) -> bool;
-}
-
 macro_rules! impl_conv_float {
     ($T:ty) => {
         impl Convertible for $T {
             fn convert<C: UnitConversion>(&self) -> Self {
                 (*self as f64 * C::SCALE) as Self
-            }
-        }
-        impl<U: PartialOrd<$T>> UnitOrd<U> for $T {
-            fn cmp<C: UnitConversion>(&self, other: &U) -> Option<Ordering> {
-                other.partial_cmp(&((*self as f64 * <C as UnitConversion>::SCALE) as $T))
-            }
-        }
-        impl<U: PartialEq<$T>> UnitEq<U> for $T {
-            fn eq<C: UnitConversion>(&self, other: &U) -> bool {
-                other.eq(&((*self as f64 * <C as UnitConversion>::SCALE) as $T))
             }
         }
     };
@@ -232,3 +247,14 @@ macro_rules! impl_conv_float {
 }
 
 impl_conv_float!{f32, f64, u32, i32, u64, i64}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::system::{si, imperial};
+
+    #[test]
+    fn convert_base_units() {
+        assert_eq!(Conversion::<si::Meter, imperial::Feet>::SCALE as f32, 3.0 / 0.9144 as f32);
+    }
+}

@@ -85,11 +85,13 @@ impl<S: UnitSystem, D: Dim, T> From<T> for Qnty<SystemUnit<S, D>, T> {
 
 impl<Ul, Tl, Ur, Tr> PartialEq<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
-    Conversion<Ur, Ul>: UnitConversion,
-    Tl: UnitEq<Tr>,
+    Ul: Unit,
+    Ur: Unit<System = <Ul as Unit>::System>,
+    <Ul as Unit>::Dim: SameDimension<<Ur as Unit>::Dim>,
+    Tl: PartialEq<Tr>,
 {
     fn eq(&self, other: &Qnty<Ur, Tr>) -> bool {
-        self.value.eq::<Conversion::<Ur, Ul>>(other.raw_value())
+        self.value == other.value
     }
 }
 
