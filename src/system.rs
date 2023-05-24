@@ -1,7 +1,8 @@
-use crate::base_unit::{mass, length, time};
-use crate::unit_system::MakeSystem;
-use crate::unit::*;
-use crate::dimension::*;
+use crate::{
+    base_unit::*,
+    dimension::*,
+    unit::*,
+};
 
 macro_rules! export_base_units {
     ($SYS:ty) => {
@@ -31,6 +32,7 @@ pub mod si {
 
     #[test]
     fn conversions() {
+        use crate::conversion::*;
         assert_eq!(Conversion::<Centimeter, Meter>::SCALE, 1.0/1_000.0);
         assert_eq!(Conversion::<Meter, Centimeter>::SCALE, 1_000.0);
 
@@ -60,6 +62,7 @@ pub mod imperial {
 
     #[test]
     fn conversions() {
+        use crate::conversion::*;
         assert_eq!(Conversion::<Feet, Yard>::SCALE, 1.0/3.0);
         assert_eq!(Conversion::<Mile, Feet>::SCALE, 5_280.0);
 

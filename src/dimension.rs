@@ -2,7 +2,16 @@ use std::marker::PhantomData as PD;
 use std::ops::{Add, Sub, Mul, Div};
 use typenum::*;
 
-use crate::base_dimension::{BaseDimension, MassBaseDimension, LengthBaseDimension, TimeBaseDimension};
+pub trait BaseDimension {}
+
+pub struct MassBaseDimension;
+impl BaseDimension for MassBaseDimension {}
+
+pub struct LengthBaseDimension;
+impl BaseDimension for LengthBaseDimension {}
+
+pub struct TimeBaseDimension;
+impl BaseDimension for TimeBaseDimension {}
 
 pub trait DimPart<D: BaseDimension> {
     type Exponent;
