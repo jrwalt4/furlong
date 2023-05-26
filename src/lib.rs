@@ -4,16 +4,19 @@
 //! 
 //! # Examples
 //! ```rust
-//! use furlong::{Qnty, system::si};
-//! let length = si::Length::new(2.0); // 2.0 meters (si::Length)
-//! let width = si::Length::new(3.0); // 3.0 meters
-//! let area = length * width;
-//! assert_eq!(area, si::Area::new(6.0));
+//! use furlong::{Qnty, system::si::{Meters, Seconds}};
+//! use typenum::{Prod, Quot};
 //! 
-//! use typenum::Quot;
-//! let time = si::Time::new(3.0); // 3.0 seconds
+//! let length = Meters::new(2.0); // 2.0 meters
+//! let width = Meters::new(3.0); // 3.0 meters
+//! let area = length * width;
+//! type SquareMeters = Prod<Meters, Meters>;
+//! assert_eq!(area, SquareMeters::new(6.0));
+//! 
+//! let time = Seconds::new(3.0); // 3.0 seconds
+//! // length is Copy because f64 is Copy
 //! let velocity = length / time;
-//! type Velocity = Quot<si::Length, si::Time>;
+//! type Velocity = Quot<Meters, Seconds>;
 //! let expected = Velocity::new(2.0 / 3.0);
 //! assert_eq!(velocity, expected);
 //! ```

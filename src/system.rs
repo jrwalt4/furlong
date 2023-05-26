@@ -4,14 +4,11 @@ use crate::{
     unit::*,
 };
 
-macro_rules! export_base_units {
-    ($SYS:ty) => {
-        pub type Mass = SystemUnit<$SYS, MassDimension>;
-        pub type Length = SystemUnit<$SYS, LengthDimension>;
-        pub type Area = SystemUnit<$SYS, AreaDimension>;
-        pub type Time = SystemUnit<$SYS, TimeDimension>;
-    };
-}
+pub type Mass<S> = SystemUnit<S, MassDimension>;
+pub type Length<S> = SystemUnit<S, LengthDimension>;
+pub type Area<S> = SystemUnit<S, AreaDimension>;
+pub type Time<S> = SystemUnit<S, TimeDimension>;
+
 pub mod si {
     use super::*;
 
@@ -20,25 +17,24 @@ pub mod si {
         length::MeterBaseUnit,
         time::SecondBaseUnit
     >;
-    export_base_units!(System);
 
-    pub type Meter = self::Length;
-    pub type Centimeter = ScaledUnit<Length, 1, 1000>;
-    pub type Kilometer = ScaledUnit<Length, 1000>;
+    pub type Meters = Length<System>;
+    pub type Centimeters = ScaledUnit<Meters, 1, 1000>;
+    pub type Kilometers = ScaledUnit<Meters, 1000>;
 
-    pub type Second = self::Time;
-    pub type Minute = ScaledUnit<Time, 60>;
-    pub type Hour = ScaledUnit<Time, 3600>;
+    pub type Seconds = Time<System>;
+    pub type Minutes = ScaledUnit<Seconds, 60>;
+    pub type Hours = ScaledUnit<Minutes, 60>;
 
     #[test]
     fn conversions() {
         use crate::conversion::*;
-        assert_eq!(Conversion::<Centimeter, Meter>::SCALE, 1.0/1_000.0);
-        assert_eq!(Conversion::<Meter, Centimeter>::SCALE, 1_000.0);
+        assert_eq!(Conversion::<Centimeters, Meters>::SCALE, 1.0/1_000.0);
+        assert_eq!(Conversion::<Meters, Centimeters>::SCALE, 1_000.0);
 
-        assert_eq!(Conversion::<Meter, Kilometer>::SCALE, 1.0/1_000.0);
+        assert_eq!(Conversion::<Meters, Kilometers>::SCALE, 1.0/1_000.0);
 
-        assert_eq!(Conversion::<Hour, Second>::SCALE, 3_600.0);
+        assert_eq!(Conversion::<Hours, Seconds>::SCALE, 3_600.0);
     }
 }
 
@@ -50,22 +46,21 @@ pub mod imperial {
         length::FootBaseUnit,
         time::SecondBaseUnit
     >;
-    export_base_units!(System);
 
-    pub type Feet = self::Length;
-    pub type Yard = ScaledUnit<Feet, 3>;
-    pub type Mile = ScaledUnit<Feet, 5_280>;
+    pub type Feet = Length<System>;
+    pub type Yards = ScaledUnit<Feet, 3>;
+    pub type Miles = ScaledUnit<Feet, 5_280>;
 
-    pub type Second = self::Time;
-    pub type Minute = ScaledUnit<Time, 60>;
-    pub type Hour = ScaledUnit<Time, 3600>;
+    pub type Seconds = Time<System>;
+    pub type Minutes = ScaledUnit<Seconds, 60>;
+    pub type Hours = ScaledUnit<Minutes, 60>;
 
     #[test]
     fn conversions() {
         use crate::conversion::*;
-        assert_eq!(Conversion::<Feet, Yard>::SCALE, 1.0/3.0);
-        assert_eq!(Conversion::<Mile, Feet>::SCALE, 5_280.0);
+        assert_eq!(Conversion::<Feet, Yards>::SCALE, 1.0/3.0);
+        assert_eq!(Conversion::<Miles, Feet>::SCALE, 5_280.0);
 
-        assert_eq!(Conversion::<Hour, Second>::SCALE, 3_600.0);
+        assert_eq!(Conversion::<Hours, Seconds>::SCALE, 3_600.0);
     }
 }

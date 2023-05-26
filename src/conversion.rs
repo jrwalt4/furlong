@@ -72,22 +72,22 @@ where
     );
 }
 
-/// Convert from a scaled unit to the base unit of that system (used with `Unit::new()`)
-impl<U: Unit, const NUM: u32, const DEN: u32> UnitConversion 
-for Conversion<ScaledUnit<U, NUM, DEN>, GetSystemUnit<U>>
+/// Convert from a scaled unit to the base unit of a system (used with `Unit::new()`)
+impl<U: Unit, const NUM: u32, const DEN: u32, S2: UnitSystem, D2: Dim> UnitConversion
+for Conversion<ScaledUnit<U, NUM, DEN>, SystemUnit<S2, D2>>
 where 
-    Conversion<U, GetSystemUnit<U>>: UnitConversion
+    Conversion<U, SystemUnit<S2, D2>>: UnitConversion
 {
-    const SCALE: f64 = NUM as f64 / DEN as f64 * Conversion::<U, GetSystemUnit<U>>::SCALE;
+    const SCALE: f64 = NUM as f64 / DEN as f64 * Conversion::<U, SystemUnit<S2, D2>>::SCALE;
 }
 
 /// Convert from the base unit of system to a scaled unit (used with [`Qnty::value`])
-impl<U: Unit, const NUM: u32, const DEN: u32> UnitConversion 
-for Conversion<GetSystemUnit<U>, ScaledUnit<U, NUM, DEN>>
+impl<U: Unit, const NUM: u32, const DEN: u32, S1: UnitSystem, D1: Dim> UnitConversion
+for Conversion<SystemUnit<S1, D1>, ScaledUnit<U, NUM, DEN>>
 where 
-    Conversion<GetSystemUnit<U>, U>: UnitConversion
+    Conversion<SystemUnit<S1, D1>, U>: UnitConversion
 {
-    const SCALE: f64 = DEN as f64 / NUM as f64 * Conversion::<GetSystemUnit<U>, U>::SCALE;
+    const SCALE: f64 = DEN as f64 / NUM as f64 * Conversion::<SystemUnit<S1, D1>, U>::SCALE;
 }
 
 /// Convert between scaled units
@@ -131,10 +131,42 @@ impl_conv_float!{f32, f64, u32, i32, u64, i64}
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::system::{si, imperial};
+    use crate::system::{
+        si::{Meters, Kilometers, Centimeters, Seconds as SecondsSI, Hours as HoursSI}, 
+        imperial::{Feet, Yards, Seconds as SecondsIMP, Hours as HoursIMP, Miles}
+    };
+
+    macro_rules! assert_conv {
+        ($val1:literal $U1:ty = $val2:literal $U2:ty) => {
+            approx::assert_relative_eq!(<Conversion::<$U1, $U2> as UnitConversion>::SCALE, $val2 as f64 / $val1 as f64);
+            approx::assert_relative_eq!(<Conversion::<$U2, $U1> as UnitConversion>::SCALE, $val1 as f64 / $val2 as f64);
+        };
+    }
 
     #[test]
-    fn convert_base_units() {
-        assert_eq!(Conversion::<si::Meter, imperial::Feet>::SCALE as f32, 3.0 / 0.9144 as f32);
+    fn simple_conversions() {
+        assert_conv!(1 Kilometers= 1_000 Meters);
+        assert_conv!(1 Meters = 1_000 Centimeters);
+
+        assert_conv!(0.9144 Meters = 3.0 Feet);
+        assert_conv!(0.9144 Meters = 1.0 Yards);
+        assert_conv!(1 Yards = 3 Feet);
+        assert_conv!(1 Miles = 5280 Feet);
+
+        assert_conv!(1 HoursSI = 3_600 SecondsSI);
+        assert_conv!(1 HoursIMP = 3_600 SecondsIMP);
+        assert_conv!(1 HoursIMP = 3_600 SecondsSI);
+        assert_conv!(1 HoursSI = 3_600 SecondsIMP);
+    }
+
+    #[test]
+    fn nontrivial_conversions() {
+        assert_conv!(1 Kilometers = 1_000 Meters);
+    }
+
+    #[test]
+    fn convert_self() {
+        assert_conv!(1.0 Meters = 1.0 Meters);
+        assert_conv!(1.0 Feet = 1.0 Feet);
     }
 }

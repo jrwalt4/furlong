@@ -33,8 +33,8 @@ impl<U, T> Qnty<U, T> {
     /// of the base unit in the [`System`](crate::unit_system::UnitSystem) associated with
     /// this [`Unit`]. 
     /// ```
-    /// # use furlong::{Qnty, system::si};
-    /// let length = Qnty::<si::Length>::from_raw_value(1.0);
+    /// # use furlong::{Qnty, system::{Length, si::System as SI}};
+    /// let length = Qnty::<Length<SI>>::from_raw_value(1.0);
     /// assert_eq!(length.raw_value(), &1.0);
     /// ```
     pub fn from_raw_value(value: T) -> Qnty<U, T> {
@@ -219,22 +219,25 @@ mod test {
     use crate::{
         qnty::Qnty,
         unit::UnitInfo,
-        system::si::{self, Length as Meters},
-        system::imperial::{self, Length as Feet},
+        system::{
+            Area, Time,
+            si::{System as SI, Kilometers, Meters},
+            imperial::{Yards, Feet},
+        }
     };
 
     #[test]
     fn scaled_units() {
-        let one_km = si::Kilometer::new(1.0);
+        let one_km = Kilometers::new(1.0);
         assert_eq!(one_km.raw_value(), &1_000.0);
 
-        let one_yd = imperial::Yard::new(1.0);
+        let one_yd = Yards::new(1.0);
         assert_eq!(one_yd.raw_value(), &3.0);
 
-        let one_km_i = si::Kilometer::new(1);
+        let one_km_i = Kilometers::new(1);
         assert_eq!(one_km_i.raw_value(), &1_000);
 
-        let one_yd_i = imperial::Yard::new(1);
+        let one_yd_i = Yards::new(1);
         assert_eq!(one_yd_i.raw_value(), &3);
     }
 
@@ -309,13 +312,13 @@ mod test {
         let l1 = Meters::new(2.0f32);
         let l2 = Feet::new(3.0);
         let a1 = l1 * l2.into_unit::<Meters>();
-        assert_eq!(a1, si::Area::new(2.0*0.9144));
+        assert_eq!(a1, Area::<SI>::new(2.0*0.9144));
     }
 
     #[test]
     fn divide_units() {
         let l = Meters::new(2.0f64);
-        let t = Qnty::<si::Time>::from_raw_value(1.0);
+        let t = Qnty::<Time<SI>>::from_raw_value(1.0);
         let v = l / t;
         assert_eq!(v.raw_value(), &2.0);
     }
