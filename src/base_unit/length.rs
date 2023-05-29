@@ -1,4 +1,5 @@
 use crate::{
+    conversion::*,
     dimension::*,
     unit::*
 };
@@ -19,6 +20,14 @@ impl BaseUnitTag for YardBaseUnit {
 impl BaseUnitInfo for YardBaseUnit {
     const NAME: Info = "yard";
     const SYMBOL: Info = "yd";
+}
+
+impl ConversionTo<MeterBaseUnit> for YardBaseUnit {
+    type Factor = ConvRatio<1143, 1250>;
+}
+
+impl ConversionTo<YardBaseUnit> for MeterBaseUnit {
+    type Factor = ConvRatio<1250, 1143>;
 }
 
 impl BaseUnitTagConversion<MeterBaseUnit> for YardBaseUnit {

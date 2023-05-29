@@ -1,4 +1,7 @@
-use std::marker::PhantomData as PD;
+use std::{
+    marker::PhantomData as PD,
+    ops::{Mul, Div}
+};
 
 use crate::{
     dimension::*,
@@ -168,5 +171,132 @@ mod test {
     fn convert_self() {
         assert_conv!(1.0 Meters = 1.0 Meters);
         assert_conv!(1.0 Feet = 1.0 Feet);
+    }
+}
+
+pub trait ConversionTo<T> {
+    type Factor: ConversionFactor;
+}
+
+pub trait ConversionFactor {
+    /// Conversion factor expressed as a floating point number
+    const REAL: f64;
+
+    /// Numerator of this conversion factor expressed as a fraction
+    const NUM: u32;
+
+    /// Denomenator of this conversion factor expressed as a fraction
+    const DEN: u32;
+}
+
+pub struct ConvInt<const I: u32 = 1>;
+
+impl<const I: u32> ConversionFactor for ConvInt<I> {
+    const REAL: f64 = I as f64;
+    const NUM: u32 = I;
+    const DEN: u32 = 1;
+}
+
+impl<const I: u32, F: ConversionFactor> Mul<F> for ConvInt<I> {
+    type Output = ConvProd<Self, F>;
+    fn mul(self, _rhs: F) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl<const I: u32, F: ConversionFactor> Div<F> for ConvInt<I> {
+    type Output = ConvQuot<Self, F>;
+    fn div(self, _rhs: F) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+pub struct ConvRecip<C>(C);
+
+impl<C: ConversionFactor> ConversionFactor for ConvRecip<C> {
+    const REAL: f64 = 1.0 / C::REAL;
+    const NUM: u32 = C::DEN;
+    const DEN: u32 = C::NUM;
+}
+
+pub struct ConvRatio<const N: u32, const D: u32>;
+
+impl<const N: u32, const D: u32> ConversionFactor for ConvRatio<N, D> {
+    const REAL: f64 = N as f64 / D as f64;
+
+    const NUM: u32 = N;
+
+    const DEN: u32 = D;
+}
+
+impl<const N: u32, const D: u32, F: ConversionFactor> Mul<F> for ConvRatio<N, D> {
+    type Output = ConvProd<Self, F>;
+    fn mul(self, _rhs: F) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl<const N: u32, const D: u32, F: ConversionFactor> Div<F> for ConvRatio<N, D> {
+    type Output = ConvQuot<Self, F>;
+    fn div(self, _rhs: F) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+pub struct ConvProd<A, B>(A, B);
+
+impl<A: ConversionFactor, B: ConversionFactor> ConversionFactor for ConvProd<A, B> {
+    const REAL: f64 = A::REAL * B::REAL;
+    const NUM: u32 = A::NUM * B::NUM;
+    const DEN: u32 = A::DEN * B::DEN;
+}
+
+pub struct ConvQuot<A, B>(A, B);
+
+impl<A: ConversionFactor, B: ConversionFactor> ConversionFactor for ConvQuot<A, B> {
+    const REAL: f64 = A::REAL / B::REAL;
+    const NUM: u32 = A::NUM * B::DEN;
+    const DEN: u32 = A::DEN * B::NUM;
+}
+
+pub struct ConvPow<C, const N: u32>(C);
+
+impl<C: ConversionFactor, const N: u32> ConversionFactor for ConvPow<C, N> {
+    const REAL: f64 = power_n!(C::REAL, N);
+    const NUM: u32 = u32::pow(C::NUM, N);
+    const DEN: u32 = u32::pow(C::DEN, N);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use typenum::*;
+
+    use crate::conversion::{ConvInt, ConvProd};
+    #[test]
+    fn conversion_factor() {
+        type Half = ConvRatio<1,2>;
+        assert_eq!(Half::REAL, 0.5);
+        assert_eq!(Half::NUM, 1);
+        assert_eq!(Half::DEN, 2);
+
+        type FiveQuarters = ConvRatio<5,4>;
+        assert_eq!(FiveQuarters::REAL, 1.25);
+        assert_eq!(FiveQuarters::NUM, 5);
+        assert_eq!(FiveQuarters::DEN, 4);
+
+        assert_eq!(<ConvProd<ConvProd<ConvRatio<1,3>, ConvRatio<3, 1>>, ConvInt<2>> as ConversionFactor>::REAL, 2.0);
+
+        type Recip = ConvRecip<ConvInt<2>>;
+        assert_eq!(<Recip as ConversionFactor>::REAL, 0.5);
+        assert_eq!(<Recip as ConversionFactor>::NUM, 1);
+        assert_eq!(<Recip as ConversionFactor>::DEN, 2);
+    }
+
+    #[test]
+    fn operations() {
+        type P = ConvProd<ConvInt<2>, ConvInt<2>>;
+        assert_type_eq!(P, Prod<ConvInt<2>, ConvInt<2>>);
+        assert_eq!(P::REAL, 4.0);
     }
 }

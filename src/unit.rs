@@ -35,14 +35,18 @@ impl<B: BaseUnitTag> BaseUnit for B {
     const SCALE: f64 = 1.0;
 }
 
-pub struct ScaledBaseUnit<B, const N: u16, const D: u16 = 1> {
+pub struct ScaledBaseUnit<B, const N: u32, const D: u32 = 1> {
     base: PD<B>,
 }
 
-impl<B: BaseUnit, const N: u16, const D: u16> BaseUnit for ScaledBaseUnit<B, N, D>  {
+impl<B: BaseUnit, const N: u32, const D: u32> BaseUnit for ScaledBaseUnit<B, N, D>  {
     type Base = <B as BaseUnit>::Base;
 
     const SCALE: f64 = N as f64 / D as f64 * <B as BaseUnit>::SCALE;
+}
+
+impl<B: BaseUnitTag, const N: u32, const D: u32> ConversionTo<B> for ScaledBaseUnit<B, N, D> {
+    type Factor = ConvRatio<N, D>;
 }
 
 pub type Info = &'static str;
@@ -65,6 +69,17 @@ where
         <B1 as BaseUnit>::SCALE
         * <<B1 as BaseUnit>::Base as BaseUnitTagConversion<<B2 as BaseUnit>::Base>>::SCALE
         / <B2 as BaseUnit>::SCALE;
+}
+
+impl<
+    B1: BaseUnit, const N1: u32, const D1: u32, 
+    B2: BaseUnit, const N2: u32, const D2: u32
+> ConversionTo<ScaledBaseUnit<B2, N2, D2>> for ScaledBaseUnit<B1, N1, D1>
+where
+    <B1 as BaseUnit>::Base: BaseUnitTag<Dimension = <<B2 as BaseUnit>::Base as BaseUnitTag>::Dimension>,
+    B1: ConversionTo<B2>
+{
+    type Factor = ConvProd<ConvProd<ConvRatio<N1,D1>,ConvRatio<N2, D2>>,<B1 as ConversionTo<B2>>::Factor>;
 }
 
 pub trait Unit: Sized {
