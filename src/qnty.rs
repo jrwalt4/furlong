@@ -55,7 +55,7 @@ impl<U, T> Qnty<U, T> {
 
     pub fn into_unit<U2>(self) -> Qnty<U2, T> 
     where
-        Conversion<U, U2>: UnitConversion,
+        U: ConversionTo<U2>,
         T: Convertible
     {
         Qnty::from_raw_value(self.value.convert::<Conversion<U, U2>>())

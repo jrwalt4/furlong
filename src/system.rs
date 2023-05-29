@@ -29,12 +29,12 @@ pub mod si {
     #[test]
     fn conversions() {
         use crate::conversion::*;
-        assert_eq!(Conversion::<Centimeters, Meters>::SCALE, 1.0/1_000.0);
-        assert_eq!(Conversion::<Meters, Centimeters>::SCALE, 1_000.0);
+        assert_eq!(Conversion::<Centimeters, Meters>::REAL, 1.0/1_000.0);
+        assert_eq!(Conversion::<Meters, Centimeters>::REAL, 1_000.0);
 
-        assert_eq!(Conversion::<Meters, Kilometers>::SCALE, 1.0/1_000.0);
+        assert_eq!(Conversion::<Meters, Kilometers>::REAL, 1.0/1_000.0);
 
-        assert_eq!(Conversion::<Hours, Seconds>::SCALE, 3_600.0);
+        assert_eq!(Conversion::<Hours, Seconds>::REAL, 3_600.0);
     }
 }
 
@@ -58,9 +58,9 @@ pub mod imperial {
     #[test]
     fn conversions() {
         use crate::conversion::*;
-        assert_eq!(Conversion::<Feet, Yards>::SCALE, 1.0/3.0);
-        assert_eq!(Conversion::<Miles, Feet>::SCALE, 5_280.0);
+        assert_eq!(Conversion::<Feet, Yards>::REAL, 1.0/3.0);
+        assert_eq!(Conversion::<Miles, Feet>::REAL, 5_280.0);
 
-        assert_eq!(Conversion::<Hours, Seconds>::SCALE, 3_600.0);
+        assert_eq!(Conversion::<Hours, Seconds>::REAL, 3_600.0);
     }
 }

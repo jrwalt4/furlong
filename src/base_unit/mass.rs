@@ -1,4 +1,5 @@
 use crate::{
+    conversion::*,
     dimension::*,
     unit::*
 };
@@ -22,12 +23,15 @@ pub struct SlugBaseUnit;
 impl BaseUnitTag for SlugBaseUnit {
     type Dimension = MassBaseDimension;
 }
-impl BaseUnitTagConversion<GramBaseUnit> for SlugBaseUnit {
-    const SCALE: f64 = 14590.0;
+
+impl ConversionTo<GramBaseUnit> for SlugBaseUnit {
+    type Factor = ConvInt<14590>;
 }
-impl BaseUnitTagConversion<SlugBaseUnit> for GramBaseUnit {
-    const SCALE: f64 = 6.85218e-5;
+
+impl ConversionTo<SlugBaseUnit> for GramBaseUnit {
+    type Factor = ConvRatio<1,14590>;
 }
+
 impl BaseUnitInfo for SlugBaseUnit {
     const NAME: Info = "slug";
     const SYMBOL: Info = "slug";

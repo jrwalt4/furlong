@@ -30,14 +30,6 @@ impl ConversionTo<YardBaseUnit> for MeterBaseUnit {
     type Factor = ConvRatio<1250, 1143>;
 }
 
-impl BaseUnitTagConversion<MeterBaseUnit> for YardBaseUnit {
-    const SCALE: f64 = 0.9144;
-}
-
-impl BaseUnitTagConversion<YardBaseUnit> for MeterBaseUnit {
-    const SCALE: f64 = 1.0936132983377078;
-}
-
 pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, 1, 3>;
 impl BaseUnitInfo for FootBaseUnit {
     const NAME: Info = "feet";
