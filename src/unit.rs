@@ -130,13 +130,13 @@ where
     GetBase<S, LengthBaseDimension>: BaseUnitInfo,
     GetBase<S, TimeBaseDimension>: BaseUnitInfo,
     D: Dim,
-    GetDim<D, MassBaseDimension>: Integer,
-    GetDim<D, LengthBaseDimension>: Integer,
-    GetDim<D, TimeBaseDimension>: Integer,
+    GetDimPart<D, MassBaseDimension>: Integer,
+    GetDimPart<D, LengthBaseDimension>: Integer,
+    GetDimPart<D, TimeBaseDimension>: Integer,
 {
     fn abbr() -> String {
         let mass_abbr = <GetBase<S, MassBaseDimension> as BaseUnitInfo>::SYMBOL;
-        let mass_pwr = <GetDim<D, MassBaseDimension> as Integer>::I8;
+        let mass_pwr = <GetDimPart<D, MassBaseDimension> as Integer>::I8;
         let mass_part = match mass_pwr {
             0 => String::from(""),
             1 => String::from(mass_abbr),
@@ -144,7 +144,7 @@ where
         };
 
         let length_abbr = <GetBase<S, LengthBaseDimension> as BaseUnitInfo>::SYMBOL;
-        let length_pwr = <GetDim<D, LengthBaseDimension> as Integer>::I8;
+        let length_pwr = <GetDimPart<D, LengthBaseDimension> as Integer>::I8;
         let length_part = match length_pwr {
             0 => String::from(""),
             1 => String::from(length_abbr),
@@ -152,7 +152,7 @@ where
         };
 
         let time_abbr = <GetBase<S, TimeBaseDimension> as BaseUnitInfo>::SYMBOL;
-        let time_pwr = <GetDim<D, TimeBaseDimension> as Integer>::I8;
+        let time_pwr = <GetDimPart<D, TimeBaseDimension> as Integer>::I8;
         let time_part = match time_pwr {
             0 => String::from(""),
             1 => String::from(time_abbr),
@@ -213,18 +213,18 @@ where
     Dim2: Dim,
     Dim1: SameDimension<Dim2>,
     GetBase<Sys1, MassBaseDimension>: ConversionTo<GetBase<Sys2, MassBaseDimension>>,
-    ConvPow<<GetBase<Sys1, MassBaseDimension> as ConversionTo<GetBase<Sys2, MassBaseDimension>>>::Factor, GetDim<Dim1, MassBaseDimension>>: ConversionFactor,
+    ConvPow<<GetBase<Sys1, MassBaseDimension> as ConversionTo<GetBase<Sys2, MassBaseDimension>>>::Factor, GetDimPart<Dim1, MassBaseDimension>>: ConversionFactor,
     GetBase<Sys1, LengthBaseDimension>: ConversionTo<GetBase<Sys2, LengthBaseDimension>>,
-    ConvPow<<GetBase<Sys1, LengthBaseDimension> as ConversionTo<GetBase<Sys2, LengthBaseDimension>>>::Factor, GetDim<Dim1, LengthBaseDimension>>: ConversionFactor,
+    ConvPow<<GetBase<Sys1, LengthBaseDimension> as ConversionTo<GetBase<Sys2, LengthBaseDimension>>>::Factor, GetDimPart<Dim1, LengthBaseDimension>>: ConversionFactor,
     GetBase<Sys1, TimeBaseDimension>: ConversionTo<GetBase<Sys2, TimeBaseDimension>>,
-    ConvPow<<GetBase<Sys1, TimeBaseDimension> as ConversionTo<GetBase<Sys2, TimeBaseDimension>>>::Factor, GetDim<Dim1, TimeBaseDimension>>: ConversionFactor,
+    ConvPow<<GetBase<Sys1, TimeBaseDimension> as ConversionTo<GetBase<Sys2, TimeBaseDimension>>>::Factor, GetDimPart<Dim1, TimeBaseDimension>>: ConversionFactor,
 {
     type Factor = 
     ConvProd<
-        ConvPow<Conversion<GetBase<Sys1, MassBaseDimension>, GetBase<Sys2, MassBaseDimension>>, GetDim::<Dim1, MassBaseDimension>>,
+        ConvPow<Conversion<GetBase<Sys1, MassBaseDimension>, GetBase<Sys2, MassBaseDimension>>, GetDimPart::<Dim1, MassBaseDimension>>,
     ConvProd<
-        ConvPow<Conversion<GetBase<Sys1, LengthBaseDimension>, GetBase<Sys2, LengthBaseDimension>>, GetDim::<Dim1, LengthBaseDimension>>,
-        ConvPow<Conversion<GetBase<Sys1, TimeBaseDimension>, GetBase<Sys2, TimeBaseDimension>>, GetDim::<Dim1, TimeBaseDimension>>
+        ConvPow<Conversion<GetBase<Sys1, LengthBaseDimension>, GetBase<Sys2, LengthBaseDimension>>, GetDimPart::<Dim1, LengthBaseDimension>>,
+        ConvPow<Conversion<GetBase<Sys1, TimeBaseDimension>, GetBase<Sys2, TimeBaseDimension>>, GetDimPart::<Dim1, TimeBaseDimension>>
     >>;
 }
 
