@@ -152,12 +152,28 @@ impl<M, L, T> Dim for Dimension<M, L, T> {}
 
 pub trait SameDimension<D> {}
 
+/// [`SameDimension`] if each exponent is the same throughout the list
+impl<E, D1, D2: SameDimension<D1>> SameDimension<DimList<E, D2>> for DimList<E, D1> {}
+
+impl<DL: SameDimension<Dimensionless>> SameDimension<Dimensionless> for TArr<Z0, DL> {}
+
+impl SameDimension<Dimensionless> for Dimensionless {}
+
 impl<D1: Dim, D2: Dim> SameDimension<D2> for D1
 where
     D1: DimPart<MassBaseDimension, Exponent = <D2 as DimPart<MassBaseDimension>>::Exponent>,
     D1: DimPart<LengthBaseDimension, Exponent = <D2 as DimPart<LengthBaseDimension>>::Exponent>,
     D1: DimPart<TimeBaseDimension, Exponent = <D2 as DimPart<TimeBaseDimension>>::Exponent>,
 {}
+
+#[test]
+fn same_dimension() {
+    use typenum::tarr;
+    use std::marker::PhantomData;
+
+    fn assert_same_dimension<D1, D2: SameDimension<D1>>(_: PhantomData<D1>, _: PhantomData<D2>) {}
+    assert_same_dimension::<tarr![P1, P2], tarr![P1, P2, Z0, Z0]>(PhantomData, PhantomData);
+}
 
 /// If we define with [`SameDimension`] then custom types that implement Dim can be used as well
 impl<M, L, T, Other: SameDimension<Dimension<M, L, T>>> Add<Other> for Dimension<M, L, T> {
