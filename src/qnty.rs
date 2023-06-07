@@ -79,7 +79,7 @@ impl<U, T> Qnty<U, T> {
 
 }
 
-impl<S: UnitSystem, D: Dim, T> From<T> for Qnty<SystemUnit<S, D>, T> {
+impl<S: UnitSystem, D, T> From<T> for Qnty<SystemUnit<S, D>, T> {
     fn from(value: T) -> Self {
         Qnty::from_raw_value(value)
     }
@@ -151,11 +151,11 @@ impl<Ul, Tl, Ur, Tr> Mul<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
     Ul: Unit,
     Ur: Unit<System = <Ul as Unit>::System>,
-    <Ul as Unit>::Dim: Mul<<Ur as Unit>::Dim>,
-    Prod<<Ul as Unit>::Dim, <Ur as Unit>::Dim>: Dim,
+    Ul: Mul<Ur>,
+    Prod<Ul, Ur>: Unit,
     Tl: Mul<Tr>
 {
-    type Output = Qnty<SystemUnit<<Ul as Unit>::System, Prod<<Ul as Unit>::Dim, Ur::Dim>>, <Tl as Mul<Tr>>::Output>;
+    type Output = Qnty<SystemUnit<<Prod<Ul, Ur> as Unit>::System, <Prod<Ul, Ur> as Unit>::Dim>, <Tl as Mul<Tr>>::Output>;
     fn mul(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
         Self::Output::from_raw_value(
             self.value * 
@@ -168,11 +168,11 @@ impl<Ul, Tl, Ur, Tr> Div<Qnty<Ur, Tr>> for Qnty<Ul, Tl>
 where
     Ul: Unit,
     Ur: Unit<System = <Ul as Unit>::System>,
-    <Ul as Unit>::Dim: Div<<Ur as Unit>::Dim>,
-    Quot<<Ul as Unit>::Dim, <Ur as Unit>::Dim>: Dim,
+    Ul: Div<Ur>,
+    Quot<Ul, Ur>: Unit,
     Tl: Div<Tr>
 {
-    type Output = Qnty<SystemUnit<Ul::System, Quot<Ul::Dim, Ur::Dim>>, <Tl as Div<Tr>>::Output>;
+    type Output = Qnty<SystemUnit<<Quot<Ul, Ur> as Unit>::System, <Quot<Ul, Ur> as Unit>::Dim>, <Tl as Div<Tr>>::Output>;
     fn div(self, rhs: Qnty<Ur, Tr>) -> Self::Output {
         Self::Output::from_raw_value( self.value / rhs.value )
     }
@@ -194,7 +194,7 @@ impl<U: UnitInfo, T: Debug> Debug for Qnty<U, T> {
 }
 
 /// Only if it's a [`SystemUnit`] does 1 have a raw_value == 1
-impl<S: UnitSystem, D: Dim, T: One> One for Qnty<SystemUnit<S, D>, T>
+impl<S: UnitSystem, D, T: One> One for Qnty<SystemUnit<S, D>, T>
 where Self: Mul<Output = Self> {
     fn one() -> Self {
         Qnty::from_raw_value(T::one())
@@ -220,8 +220,8 @@ mod test {
         qnty::Qnty,
         unit::UnitInfo,
         system::{
-            Area, Time,
-            si::{System as SI, Kilometers, Meters},
+            Area, Velocity,
+            si::{System as SI, Kilometers, Meters, Seconds},
             imperial::{Yards, Feet},
         }
     };
@@ -318,9 +318,10 @@ mod test {
     #[test]
     fn divide_units() {
         let l = Meters::new(2.0f64);
-        let t = Qnty::<Time<SI>>::from_raw_value(1.0);
+        let t = Seconds::new(1.0);
         let v = l / t;
         assert_eq!(v.raw_value(), &2.0);
+        assert_eq!(v, Velocity::<SI>::new(2.0));
     }
 
     #[test]

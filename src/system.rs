@@ -8,6 +8,7 @@ pub type Mass<S> = SystemUnit<S, MassDimension>;
 pub type Length<S> = SystemUnit<S, LengthDimension>;
 pub type Area<S> = SystemUnit<S, AreaDimension>;
 pub type Time<S> = SystemUnit<S, TimeDimension>;
+pub type Velocity<S> = SystemUnit<S, VelocityDimension>;
 
 pub mod si {
     use super::*;

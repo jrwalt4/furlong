@@ -1,11 +1,10 @@
-use std::marker::PhantomData as PD;
-use std::ops::{Add, Sub, Mul, Div};
 use typenum::{
     array::{ATerm, TArr},
     consts::*,
-    marker_traits::{Bit, TypeArray, Unsigned},
-    operator_aliases::{Diff, Prod, Quot, Sub1, Sum},
-    uint::UInt
+    marker_traits::{Bit, Unsigned},
+    operator_aliases::{Diff, Prod, Sub1},
+    uint::UInt,
+    tarr
 };
 
 /// A base dimension of mass, length, time, electrical current, etc.
@@ -79,7 +78,7 @@ impl<BD: BaseDimension> DimPart<BD> for Dimensionless {
     type Exponent = Z0;
 }
 
-impl<BD: BaseDimension, DI, DL: TypeArray> DimPart<BD> for TArr<DI, DL>
+impl<BD: BaseDimension, DI, DL> DimPart<BD> for TArr<DI, DL>
 where
     Self: Item<BD::Ordinal>
 {
@@ -88,10 +87,19 @@ where
 
 pub type GetDimPart<D, P> = <D as DimPart<P>>::Exponent;
 
+pub trait SameDimension<D> {}
+
+/// [`SameDimension`] if each exponent is the same throughout the list
+impl<E, D1, D2: SameDimension<D1>> SameDimension<DimList<E, D2>> for DimList<E, D1> {}
+
+impl<DL: SameDimension<Dimensionless>> SameDimension<Dimensionless> for TArr<Z0, DL> {}
+
+impl SameDimension<Dimensionless> for Dimensionless {}
+
 #[cfg(test)]
 mod dim_list {
     use super::*;
-    use typenum::{assert_type_eq, tarr};
+    use typenum::*;
     #[test]
     fn get_item() {
         #[allow(dead_code)]
@@ -126,101 +134,39 @@ mod dim_list {
         assert_type_eq!(Prod<Dim1, P2>, tarr![P2, P4, P2]);
         assert_type_eq!(Prod<Dim2, P2>, tarr![Z0, N2, N2]);
     }
-}
 
-pub trait Dim:
-    DimPart<MassBaseDimension> +
-    DimPart<LengthBaseDimension> +
-    DimPart<TimeBaseDimension> {}
-
-#[derive(Debug)]
-pub struct Dimension<M, L, T>(PD<M>,PD<L>,PD<T>);
-
-impl<M, L, T> DimPart<MassBaseDimension> for Dimension<M, L, T> {
-    type Exponent = M;
-}
-
-impl<M, L, T> DimPart<LengthBaseDimension> for Dimension<M, L, T> {
-    type Exponent = L;
-}
-
-impl<M, L, T> DimPart<TimeBaseDimension> for Dimension<M, L, T> {
-    type Exponent = T;
-}
-
-impl<M, L, T> Dim for Dimension<M, L, T> {}
-
-pub trait SameDimension<D> {}
-
-/// [`SameDimension`] if each exponent is the same throughout the list
-impl<E, D1, D2: SameDimension<D1>> SameDimension<DimList<E, D2>> for DimList<E, D1> {}
-
-impl<DL: SameDimension<Dimensionless>> SameDimension<Dimensionless> for TArr<Z0, DL> {}
-
-impl SameDimension<Dimensionless> for Dimensionless {}
-
-impl<D1: Dim, D2: Dim> SameDimension<D2> for D1
-where
-    D1: DimPart<MassBaseDimension, Exponent = <D2 as DimPart<MassBaseDimension>>::Exponent>,
-    D1: DimPart<LengthBaseDimension, Exponent = <D2 as DimPart<LengthBaseDimension>>::Exponent>,
-    D1: DimPart<TimeBaseDimension, Exponent = <D2 as DimPart<TimeBaseDimension>>::Exponent>,
-{}
-
-#[test]
-fn same_dimension() {
-    use typenum::tarr;
-    use std::marker::PhantomData;
-
-    fn assert_same_dimension<D1, D2: SameDimension<D1>>(_: PhantomData<D1>, _: PhantomData<D2>) {}
-    assert_same_dimension::<tarr![P1, P2], tarr![P1, P2, Z0, Z0]>(PhantomData, PhantomData);
-}
-
-/// If we define with [`SameDimension`] then custom types that implement Dim can be used as well
-impl<M, L, T, Other: SameDimension<Dimension<M, L, T>>> Add<Other> for Dimension<M, L, T> {
-    type Output = Self;
-    fn add(self, _rhs: Other) -> Self::Output {
-        unimplemented!()
+    #[test]
+    fn same_dimension() {
+        use std::marker::PhantomData;
+        fn assert_same_dimension<D1, D2: SameDimension<D1>>(_: PhantomData<D1>, _: PhantomData<D2>) {}
+        assert_same_dimension::<tarr![P1, P2], tarr![P1, P2, Z0, Z0]>(PhantomData, PhantomData);
     }
 }
 
-impl<M, L, T> Sub for Dimension<M, L, T>
-{
-    type Output = Self;
-    fn sub(self, _rhs: Self) -> Self::Output {
-        unimplemented!()
-    }
-}
-
-impl<Ml, Ll, Tl, Mr, Lr, Tr> Mul<Dimension<Mr, Lr, Tr>> for Dimension<Ml, Ll, Tl>
-where
-    Ml: Add<Mr>,
-    Ll: Add<Lr>,
-    Tl: Add<Tr>,
-{
-    type Output = Dimension<Sum<Ml, Mr>, Sum<Ll, Lr>, Sum<Tl, Tr>>;
-    fn mul(self, _: Dimension<Mr, Lr, Tr>) -> Self::Output {
-        unimplemented!()
-    }
-}
-
-impl<Ml, Ll, Tl, Mr, Lr, Tr> Div<Dimension<Mr, Lr, Tr>> for Dimension<Ml, Ll, Tl>
-where
-    Ml: Sub<Mr>,
-    Ll: Sub<Lr>,
-    Tl: Sub<Tr>,
-{
-    type Output = Dimension<Diff<Ml, Mr>, Diff<Ll, Lr>, Diff<Tl, Tr>>;
-    fn div(self, _: Dimension<Mr, Lr, Tr>) -> Self::Output {
-        unimplemented!()
-    }
-}
+pub type Dimension<
+    Mass=Z0, 
+    Length=Z0, 
+    Time=Z0, 
+    // Current=Z0, 
+    // Temperature=Z0, 
+    // Light=Z0, 
+    // Amount=Z0
+> = tarr![
+    Mass, 
+    Length, 
+    Time, 
+    // Current, 
+    // Temperature, 
+    // Light, 
+    // Amount
+];
 
 pub type MassDimension = Dimension<P1, Z0, Z0>;
 
 pub type LengthDimension = Dimension<Z0, P1, Z0>;
-pub type AreaDimension = Prod<LengthDimension, LengthDimension>;
-pub type VolumeDimension = Prod<LengthDimension, AreaDimension>;
+pub type AreaDimension = Prod<LengthDimension, P2>;
+pub type VolumeDimension = Prod<LengthDimension, P3>;
 
 pub type TimeDimension = Dimension<Z0, Z0, P1>;
 
-pub type VelocityDimension = Quot<LengthDimension, TimeDimension>;
+pub type VelocityDimension = Diff<LengthDimension, TimeDimension>;

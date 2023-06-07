@@ -1,6 +1,6 @@
 use std::marker::PhantomData as PD;
-use std::ops::{Mul, Div};
-use typenum::{Integer, Prod, Quot};
+use std::ops::{Add, Div, Mul, Sub};
+use typenum::{Integer, Diff, Sum};
 
 use crate::{
     conversion::*,
@@ -69,7 +69,7 @@ pub trait BaseUnitInfo: BaseUnit {
 
 pub trait Unit: Sized {
     type System: UnitSystem;
-    type Dim: Dim;
+    type Dim;
 }
 
 pub trait UnitInfo: Unit {
@@ -107,18 +107,18 @@ impl<Mass, Length, Time: BaseUnit> UnitSystemPart<TimeBaseDimension> for MakeSys
 
 impl<M: BaseUnit, L: BaseUnit, T: BaseUnit> UnitSystem for MakeSystem<M, L, T> {}
 
-pub struct SystemUnit<S: UnitSystem, D: Dim> {
+pub struct SystemUnit<S: UnitSystem, D> {
     system: PD<S>,
     dimension: PD<D>,
 }
 
-impl<S: UnitSystem, D: Dim> SystemUnit<S, D> {
+impl<S: UnitSystem, D> SystemUnit<S, D> {
     pub fn new<T>(value: T) -> Qnty<Self, T> {
         Qnty::from_raw_value(value)
     }
 }
 
-impl<S: UnitSystem, D: Dim> Unit for SystemUnit<S, D> {
+impl<S: UnitSystem, D> Unit for SystemUnit<S, D> {
     type System = S;
     type Dim = D;
 }
@@ -126,10 +126,10 @@ impl<S: UnitSystem, D: Dim> Unit for SystemUnit<S, D> {
 impl<S, D> UnitInfo for SystemUnit<S, D>
 where
     S: UnitSystem,
+    D: DimPart<MassBaseDimension> + DimPart<LengthBaseDimension> + DimPart<TimeBaseDimension>,
     GetBase<S, MassBaseDimension>: BaseUnitInfo,
     GetBase<S, LengthBaseDimension>: BaseUnitInfo,
     GetBase<S, TimeBaseDimension>: BaseUnitInfo,
-    D: Dim,
     GetDimPart<D, MassBaseDimension>: Integer,
     GetDimPart<D, LengthBaseDimension>: Integer,
     GetDimPart<D, TimeBaseDimension>: Integer,
@@ -162,24 +162,22 @@ where
     }
 }
 
-impl<S: UnitSystem, D: Dim, Ur: Unit> Mul<Ur> for SystemUnit<S, D>
+impl<S: UnitSystem, D, Ur: Unit> Mul<Ur> for SystemUnit<S, D>
 where
-    D: Mul<<Ur as Unit>::Dim>,
-    Prod<D, <Ur as Unit>::Dim>: Dim
+    D: Add<<Ur as Unit>::Dim>,
 {
-    type Output = SystemUnit<S, Prod<D, <Ur as Unit>::Dim>>;
+    type Output = SystemUnit<S, Sum<D, <Ur as Unit>::Dim>>;
 
     fn mul(self, _: Ur) -> Self::Output {
         unimplemented!()
     }
 }
 
-impl<S: UnitSystem, D: Dim, Ur: Unit> Div<Ur> for SystemUnit<S, D>
+impl<S: UnitSystem, D, Ur: Unit> Div<Ur> for SystemUnit<S, D>
 where
-    D: Div<<Ur as Unit>::Dim>,
-    Quot<D, <Ur as Unit>::Dim>: Dim
+    D: Sub<<Ur as Unit>::Dim>,
 {
-    type Output = SystemUnit<S, Quot<D, <Ur as Unit>::Dim>>;
+    type Output = SystemUnit<S, Diff<D, <Ur as Unit>::Dim>>;
 
     fn div(self, _: Ur) -> Self::Output {
         unimplemented!();
@@ -208,10 +206,9 @@ impl<U: Unit, const NUM: u32, const DEN: u32> ScaledUnit<U, NUM, DEN> {
 impl<Sys1, Dim1, Sys2, Dim2> ConversionTo<SystemUnit<Sys2, Dim2>> for SystemUnit<Sys1, Dim1>
 where
     Sys1: UnitSystem,
-    Dim1: Dim,
     Sys2: UnitSystem,
-    Dim2: Dim,
     Dim1: SameDimension<Dim2>,
+    Dim1: DimPart<MassBaseDimension> + DimPart<LengthBaseDimension> + DimPart<TimeBaseDimension>,
     GetBase<Sys1, MassBaseDimension>: ConversionTo<GetBase<Sys2, MassBaseDimension>>,
     ConvPow<<GetBase<Sys1, MassBaseDimension> as ConversionTo<GetBase<Sys2, MassBaseDimension>>>::Factor, GetDimPart<Dim1, MassBaseDimension>>: ConversionFactor,
     GetBase<Sys1, LengthBaseDimension>: ConversionTo<GetBase<Sys2, LengthBaseDimension>>,
@@ -229,7 +226,7 @@ where
 }
 
 /// Convert from a scaled unit to the base unit of a system (used with `Unit::new()`)
-impl<U: Unit, const NUM: u32, const DEN: u32, S2: UnitSystem, D2: Dim> ConversionTo<SystemUnit<S2, D2>> for ScaledUnit<U, NUM, DEN>
+impl<U: Unit, const NUM: u32, const DEN: u32, S2: UnitSystem, D2> ConversionTo<SystemUnit<S2, D2>> for ScaledUnit<U, NUM, DEN>
 where 
     U: ConversionTo<SystemUnit<S2, D2>>
 {
@@ -237,7 +234,7 @@ where
 }
 
 /// Convert from the base unit of system to a scaled unit (used with [`Qnty::value`])
-impl<U: Unit, const NUM: u32, const DEN: u32, S1: UnitSystem, D1: Dim> ConversionTo<ScaledUnit<U, NUM, DEN>> for SystemUnit<S1, D1>
+impl<U: Unit, const NUM: u32, const DEN: u32, S1: UnitSystem, D1> ConversionTo<ScaledUnit<U, NUM, DEN>> for SystemUnit<S1, D1>
 where 
     SystemUnit<S1, D1>: ConversionTo<U>
 {
