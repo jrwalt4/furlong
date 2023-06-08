@@ -79,7 +79,7 @@ impl<U, T> Qnty<U, T> {
 
 }
 
-impl<S: UnitSystem, D, T> From<T> for Qnty<SystemUnit<S, D>, T> {
+impl<S, D, T> From<T> for Qnty<SystemUnit<S, D>, T> {
     fn from(value: T) -> Self {
         Qnty::from_raw_value(value)
     }
@@ -194,7 +194,7 @@ impl<U: UnitInfo, T: Debug> Debug for Qnty<U, T> {
 }
 
 /// Only if it's a [`SystemUnit`] does 1 have a raw_value == 1
-impl<S: UnitSystem, D, T: One> One for Qnty<SystemUnit<S, D>, T>
+impl<S, D, T: One> One for Qnty<SystemUnit<S, D>, T>
 where Self: Mul<Output = Self> {
     fn one() -> Self {
         Qnty::from_raw_value(T::one())

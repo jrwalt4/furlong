@@ -61,7 +61,7 @@ impl<V, A> Item<U0> for TArr<V, A> {
 }
 
 /// Type Alias for the `I`'th item of list `L`.
-type GetItem<L, I> = <L as Item<I>>::Output;
+pub(crate) type GetItem<L, I> = <L as Item<I>>::Output;
 
 /// Type representing no dimension where all exponents are 0. 
 /// Since every [`TArr`] ends with [`ATerm`], having dimensionless

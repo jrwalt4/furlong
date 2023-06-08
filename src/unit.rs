@@ -1,6 +1,6 @@
 use std::marker::PhantomData as PD;
 use std::ops::{Add, Div, Mul, Sub};
-use typenum::{Integer, Diff, Sum};
+use typenum::{Integer, Diff, Sum, ATerm, TArr, tarr};
 
 use crate::{
     conversion::*,
@@ -68,7 +68,7 @@ pub trait BaseUnitInfo: BaseUnit {
 }
 
 pub trait Unit: Sized {
-    type System: UnitSystem;
+    type System;
     type Dim;
 }
 
@@ -82,50 +82,37 @@ pub trait UnitSystemPart<D: BaseDimension> {
 
 pub type GetBase<S, D> = <S as UnitSystemPart<D>>::Base;
 
-pub trait UnitSystem:
-    UnitSystemPart<MassBaseDimension> +
-    UnitSystemPart<LengthBaseDimension> +
-    UnitSystemPart<TimeBaseDimension> {}
+pub type MakeSystem<MassBase, LengthBase, TimeBase> = tarr![MassBase, LengthBase, TimeBase];
 
-pub struct MakeSystem<MB, LB, TB> {
-    mass_base: PD<MB>,
-    length_base: PD<LB>,
-    time_base: PD<TB>,
+pub type Unitless = ATerm;
+
+impl<BD: BaseDimension, UI, UL> UnitSystemPart<BD> for TArr<UI, UL>
+where
+    Self: Item<BD::Ordinal>,
+    GetItem<Self, BD::Ordinal>: BaseUnit
+{
+    type Base = GetItem<Self, BD::Ordinal>;
 }
 
-impl<Mass: BaseUnit, Length, Time> UnitSystemPart<MassBaseDimension> for MakeSystem<Mass, Length, Time> {
-    type Base = Mass;
-}
-
-impl<Mass, Length: BaseUnit, Time> UnitSystemPart<LengthBaseDimension> for MakeSystem<Mass, Length, Time> {
-    type Base = Length;
-}
-
-impl<Mass, Length, Time: BaseUnit> UnitSystemPart<TimeBaseDimension> for MakeSystem<Mass, Length, Time> {
-    type Base = Time;
-}
-
-impl<M: BaseUnit, L: BaseUnit, T: BaseUnit> UnitSystem for MakeSystem<M, L, T> {}
-
-pub struct SystemUnit<S: UnitSystem, D> {
+pub struct SystemUnit<S, D> {
     system: PD<S>,
     dimension: PD<D>,
 }
 
-impl<S: UnitSystem, D> SystemUnit<S, D> {
+impl<S, D> SystemUnit<S, D> {
     pub fn new<T>(value: T) -> Qnty<Self, T> {
         Qnty::from_raw_value(value)
     }
 }
 
-impl<S: UnitSystem, D> Unit for SystemUnit<S, D> {
+impl<S, D> Unit for SystemUnit<S, D> {
     type System = S;
     type Dim = D;
 }
 
 impl<S, D> UnitInfo for SystemUnit<S, D>
 where
-    S: UnitSystem,
+    S: UnitSystemPart<MassBaseDimension> + UnitSystemPart<LengthBaseDimension> + UnitSystemPart<TimeBaseDimension>,
     D: DimPart<MassBaseDimension> + DimPart<LengthBaseDimension> + DimPart<TimeBaseDimension>,
     GetBase<S, MassBaseDimension>: BaseUnitInfo,
     GetBase<S, LengthBaseDimension>: BaseUnitInfo,
@@ -162,7 +149,7 @@ where
     }
 }
 
-impl<S: UnitSystem, D, Ur: Unit> Mul<Ur> for SystemUnit<S, D>
+impl<S, D, Ur: Unit> Mul<Ur> for SystemUnit<S, D>
 where
     D: Add<<Ur as Unit>::Dim>,
 {
@@ -173,7 +160,7 @@ where
     }
 }
 
-impl<S: UnitSystem, D, Ur: Unit> Div<Ur> for SystemUnit<S, D>
+impl<S, D, Ur: Unit> Div<Ur> for SystemUnit<S, D>
 where
     D: Sub<<Ur as Unit>::Dim>,
 {
@@ -205,8 +192,8 @@ impl<U: Unit, const NUM: u32, const DEN: u32> ScaledUnit<U, NUM, DEN> {
 /// Convert between base units of different systems
 impl<Sys1, Dim1, Sys2, Dim2> ConversionTo<SystemUnit<Sys2, Dim2>> for SystemUnit<Sys1, Dim1>
 where
-    Sys1: UnitSystem,
-    Sys2: UnitSystem,
+    Sys1: UnitSystemPart<MassBaseDimension> + UnitSystemPart<LengthBaseDimension> + UnitSystemPart<TimeBaseDimension>,
+    Sys2: UnitSystemPart<MassBaseDimension> + UnitSystemPart<LengthBaseDimension> + UnitSystemPart<TimeBaseDimension>,
     Dim1: SameDimension<Dim2>,
     Dim1: DimPart<MassBaseDimension> + DimPart<LengthBaseDimension> + DimPart<TimeBaseDimension>,
     GetBase<Sys1, MassBaseDimension>: ConversionTo<GetBase<Sys2, MassBaseDimension>>,
@@ -226,7 +213,7 @@ where
 }
 
 /// Convert from a scaled unit to the base unit of a system (used with `Unit::new()`)
-impl<U: Unit, const NUM: u32, const DEN: u32, S2: UnitSystem, D2> ConversionTo<SystemUnit<S2, D2>> for ScaledUnit<U, NUM, DEN>
+impl<U: Unit, const NUM: u32, const DEN: u32, S2, D2> ConversionTo<SystemUnit<S2, D2>> for ScaledUnit<U, NUM, DEN>
 where 
     U: ConversionTo<SystemUnit<S2, D2>>
 {
@@ -234,7 +221,7 @@ where
 }
 
 /// Convert from the base unit of system to a scaled unit (used with [`Qnty::value`])
-impl<U: Unit, const NUM: u32, const DEN: u32, S1: UnitSystem, D1> ConversionTo<ScaledUnit<U, NUM, DEN>> for SystemUnit<S1, D1>
+impl<U: Unit, const NUM: u32, const DEN: u32, S1, D1> ConversionTo<ScaledUnit<U, NUM, DEN>> for SystemUnit<S1, D1>
 where 
     SystemUnit<S1, D1>: ConversionTo<U>
 {
