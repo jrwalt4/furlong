@@ -189,27 +189,23 @@ impl<U: Unit, const NUM: u32, const DEN: u32> ScaledUnit<U, NUM, DEN> {
     }
 }
 
-/// Convert between base units of different systems
-impl<Sys1, Dim1, Sys2, Dim2> ConversionTo<SystemUnit<Sys2, Dim2>> for SystemUnit<Sys1, Dim1>
+impl<BU1, BURest1, BU2, BURest2, D, DRest> 
+    ConversionTo<SystemUnit<TArr<BU2, BURest2>, TArr<D, DRest>>>
+for 
+    SystemUnit<TArr<BU1, BURest1>, TArr<D, DRest>>
 where
-    Sys1: UnitSystemPart<MassBaseDimension> + UnitSystemPart<LengthBaseDimension> + UnitSystemPart<TimeBaseDimension>,
-    Sys2: UnitSystemPart<MassBaseDimension> + UnitSystemPart<LengthBaseDimension> + UnitSystemPart<TimeBaseDimension>,
-    Dim1: SameDimension<Dim2>,
-    Dim1: DimPart<MassBaseDimension> + DimPart<LengthBaseDimension> + DimPart<TimeBaseDimension>,
-    GetBase<Sys1, MassBaseDimension>: ConversionTo<GetBase<Sys2, MassBaseDimension>>,
-    ConvPow<<GetBase<Sys1, MassBaseDimension> as ConversionTo<GetBase<Sys2, MassBaseDimension>>>::Factor, GetDimPart<Dim1, MassBaseDimension>>: ConversionFactor,
-    GetBase<Sys1, LengthBaseDimension>: ConversionTo<GetBase<Sys2, LengthBaseDimension>>,
-    ConvPow<<GetBase<Sys1, LengthBaseDimension> as ConversionTo<GetBase<Sys2, LengthBaseDimension>>>::Factor, GetDimPart<Dim1, LengthBaseDimension>>: ConversionFactor,
-    GetBase<Sys1, TimeBaseDimension>: ConversionTo<GetBase<Sys2, TimeBaseDimension>>,
-    ConvPow<<GetBase<Sys1, TimeBaseDimension> as ConversionTo<GetBase<Sys2, TimeBaseDimension>>>::Factor, GetDimPart<Dim1, TimeBaseDimension>>: ConversionFactor,
+    BU1: ConversionTo<BU2>,
+    ConvPow<Conversion<BU1, BU2>, D>: ConversionFactor,
+    SystemUnit<BURest1, DRest>: ConversionTo<SystemUnit<BURest2, DRest>>
 {
-    type Factor = 
-    ConvProd<
-        ConvPow<Conversion<GetBase<Sys1, MassBaseDimension>, GetBase<Sys2, MassBaseDimension>>, GetDimPart::<Dim1, MassBaseDimension>>,
-    ConvProd<
-        ConvPow<Conversion<GetBase<Sys1, LengthBaseDimension>, GetBase<Sys2, LengthBaseDimension>>, GetDimPart::<Dim1, LengthBaseDimension>>,
-        ConvPow<Conversion<GetBase<Sys1, TimeBaseDimension>, GetBase<Sys2, TimeBaseDimension>>, GetDimPart::<Dim1, TimeBaseDimension>>
-    >>;
+    type Factor = ConvProd<
+                    ConvPow<Conversion<BU1, BU2>, D>,
+                    Conversion<SystemUnit<BURest1, DRest>, SystemUnit<BURest2, DRest>>
+                >;
+}
+
+impl ConversionTo<SystemUnit<ATerm, ATerm>> for SystemUnit<ATerm, ATerm> {
+    type Factor = ConvInt<1>;
 }
 
 /// Convert from a scaled unit to the base unit of a system (used with `Unit::new()`)

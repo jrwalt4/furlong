@@ -63,6 +63,14 @@ impl<V, A> Item<U0> for TArr<V, A> {
 /// Type Alias for the `I`'th item of list `L`.
 pub(crate) type GetItem<L, I> = <L as Item<I>>::Output;
 
+pub(crate) trait TypeIter {
+    type Next;
+}
+
+impl<V, A> TypeIter for TArr<V, A> {
+    type Next = A;
+}
+
 /// Type representing no dimension where all exponents are 0. 
 /// Since every [`TArr`] ends with [`ATerm`], having dimensionless
 /// at the end will default all base dimensions to 0 if they are not
