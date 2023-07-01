@@ -9,12 +9,14 @@ use typenum::{
     type_operators::{Cmp, IsEqual}
 };
 
+//-----------------------------------------------------------------------------
+// TMap, TEnd, and TEntry
+
+/// A collection of [`TypeMapEntry`]'s
 pub trait TypeMap {}
 
-/// A TypeList similar to [`TArr`](typenum::TArr). 
-/// 
-/// The difference is the implementation of Add and Sub that 
-/// combines elements so list of different lengths can be used. 
+/// A type container similar to [`TArr`](typenum::TArr), 
+/// but for (key, value) pairs of type [`TEntry`].
 #[derive(Copy, Clone, Default, Debug)]
 pub struct TMap<Entry, Map> {
     _entry: Entry,
@@ -35,7 +37,10 @@ pub trait TypeMapEntry {
     type Value;
 }
 
+/// The [`Key`](TypeMapEntry::Key) of a [`TypeMapEntry`];
 pub type TKey<E> = <E as TypeMapEntry>::Key;
+
+/// The [`Value`](TypeMapEntry::Value) of a [`TypeMapEntry`];
 pub type TVal<E> = <E as TypeMapEntry>::Value;
 
 /// An item in a [`TMap`] with a Key and Value.
@@ -48,6 +53,15 @@ impl<K, V> TypeMapEntry for TEntry<K, V> {
 }
 
 #[macro_export]
+/// Macro to build a TMap
+/// # Example
+/// ```
+/// # use furlong::{tmap, mp::map::{TMap, TEntry, TEnd}};
+/// # use typenum::*;
+/// struct A;
+/// struct B;
+/// assert_type_eq!(tmap!{A: U1, B: U2}, TMap<TEntry<A, U1>, TMap<TEntry<B, U2>, TEnd>>);
+/// ```
 macro_rules! tmap {
     () => { $crate::mp::map::TEnd };
     ($K:ty: $V:ty,) => { $crate::mp::map::TMap<$crate::mp::map::TEntry<$K, $V>, $crate::mp::map::TEnd> };
@@ -102,6 +116,9 @@ where
 }
 
 pub type MapGet<L, K> = <L as TypeMapFind<K>>::Output;
+
+//-----------------------------------------------------------------------------
+// Add
 
 /// ```
 /// # use typenum::*;
@@ -185,6 +202,18 @@ impl<KeyL, ValL: Add<ValR>, KeyR, ValR> Add<TEntry<KeyR, ValR>> for TEntry<KeyL,
     }
 }
 
+#[test]
+fn tmap_add() {
+    use typenum::*;
+    type M1 = tmap!{U1: P2};
+    type M2 = tmap!{U2: P3};
+    type M3 = Sum<M1, M2>;
+    assert_type_eq!(M3, tmap!{U1: P2, U2: P3});
+    assert_eq!(<MapGet<M3, U2> as Integer>::I32, 3);
+}
+//-----------------------------------------------------------------------------
+// Sub
+
 impl<El, Ml, Er, Mr> Sub<TMap<Er, Mr>> for TMap<El, Ml>
 where
     TMap<Er, Mr>: Neg,
@@ -195,6 +224,25 @@ where
         unimplemented!()
     }
 }
+
+#[test]
+fn tmap_sub() {
+    use typenum::*;
+    type M1 = tmap!{U1: P2};
+    type M2 = tmap!{U2: P3};
+    type M3 = Diff<M1, M2>;
+    assert_type_eq!(M3, tmap!{U1: P2, U2: N3});
+    assert_eq!(<MapGet<M3, U2> as Integer>::I32, -3);
+
+    type M4 = tmap!{U1: P2, U2: P2};
+    type M5 = tmap!{U1: P2, U2: P2};
+    type M6 = Diff<M4, M5>;
+    assert_type_eq!(M6, tmap!{U1: Z0, U2: Z0});
+    assert_eq!(<MapGet<M6, U2> as Integer>::I32, 0);
+}
+
+//-----------------------------------------------------------------------------
+// Neg
 
 impl<E: Neg, M: Neg> Neg for TMap<E, M> {
     type Output = TMap<Negate<E>, Negate<M>>;
@@ -215,30 +263,4 @@ impl<K, V: Neg> Neg for TEntry<K, V> {
     fn neg(self) -> Self::Output {
         unimplemented!()
     }
-}
-
-#[test]
-fn tmap_add() {
-    use typenum::*;
-    type M1 = tmap!{U1: P2};
-    type M2 = tmap!{U2: P3};
-    type M3 = Sum<M1, M2>;
-    assert_type_eq!(M3, tmap!{U1: P2, U2: P3});
-    assert_eq!(<MapGet<M3, U2> as Integer>::I32, 3);
-}
-
-#[test]
-fn tmap_sub() {
-    use typenum::*;
-    type M1 = tmap!{U1: P2};
-    type M2 = tmap!{U2: P3};
-    type M3 = Diff<M1, M2>;
-    assert_type_eq!(M3, tmap!{U1: P2, U2: N3});
-    assert_eq!(<MapGet<M3, U2> as Integer>::I32, -3);
-
-    type M4 = tmap!{U1: P2, U2: P2};
-    type M5 = tmap!{U1: P2, U2: P2};
-    type M6 = Diff<M4, M5>;
-    assert_type_eq!(M6, tmap!{U1: Z0, U2: Z0});
-    assert_eq!(<MapGet<M6, U2> as Integer>::I32, 0);
 }
