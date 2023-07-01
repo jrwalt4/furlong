@@ -2,10 +2,10 @@
 
 use super::*;
 
-use std::ops::Add;
+use std::ops::{Add, Neg, Sub};
 
 use typenum::{
-    operator_aliases::{Compare, Eq, Sum},
+    operator_aliases::{Compare, Eq, Negate, Sum},
     type_operators::{Cmp, IsEqual}
 };
 
@@ -185,6 +185,38 @@ impl<KeyL, ValL: Add<ValR>, KeyR, ValR> Add<TEntry<KeyR, ValR>> for TEntry<KeyL,
     }
 }
 
+impl<El, Ml, Er, Mr> Sub<TMap<Er, Mr>> for TMap<El, Ml>
+where
+    TMap<Er, Mr>: Neg,
+    Self: Add<Negate<TMap<Er, Mr>>>
+{
+    type Output = Sum<Self, Negate<TMap<Er, Mr>>>;
+    fn sub(self, _rhs: TMap<Er, Mr>) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl<E: Neg, M: Neg> Neg for TMap<E, M> {
+    type Output = TMap<Negate<E>, Negate<M>>;
+    fn neg(self) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl Neg for TEnd {
+    type Output = TEnd;
+    fn neg(self) -> Self::Output {
+        TEnd
+    }
+}
+
+impl<K, V: Neg> Neg for TEntry<K, V> {
+    type Output = TEntry<K, Negate<V>>;
+    fn neg(self) -> Self::Output {
+        unimplemented!()
+    }
+}
+
 #[test]
 fn tmap_add() {
     use typenum::*;
@@ -193,4 +225,20 @@ fn tmap_add() {
     type M3 = Sum<M1, M2>;
     assert_type_eq!(M3, tmap!{U1: P2, U2: P3});
     assert_eq!(<MapGet<M3, U2> as Integer>::I32, 3);
+}
+
+#[test]
+fn tmap_sub() {
+    use typenum::*;
+    type M1 = tmap!{U1: P2};
+    type M2 = tmap!{U2: P3};
+    type M3 = Diff<M1, M2>;
+    assert_type_eq!(M3, tmap!{U1: P2, U2: N3});
+    assert_eq!(<MapGet<M3, U2> as Integer>::I32, -3);
+
+    type M4 = tmap!{U1: P2, U2: P2};
+    type M5 = tmap!{U1: P2, U2: P2};
+    type M6 = Diff<M4, M5>;
+    assert_type_eq!(M6, tmap!{U1: Z0, U2: Z0});
+    assert_eq!(<MapGet<M6, U2> as Integer>::I32, 0);
 }
