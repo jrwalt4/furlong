@@ -56,7 +56,7 @@ impl<K, V> TypeMapEntry for TEntry<K, V> {
 /// Macro to build a TMap
 /// # Example
 /// ```
-/// # use furlong::{tmap, mp::map::{TMap, TEntry, TEnd}};
+/// # use furlong::{tmap, mpl::{TMap, TEntry, TEnd}};
 /// # use typenum::*;
 /// struct A;
 /// struct B;
@@ -64,58 +64,54 @@ impl<K, V> TypeMapEntry for TEntry<K, V> {
 /// ```
 macro_rules! tmap {
     () => { $crate::mp::map::TEnd };
-    ($K:ty: $V:ty,) => { $crate::mp::map::TMap<$crate::mp::map::TEntry<$K, $V>, $crate::mp::map::TEnd> };
-    ($K:ty: $V:ty) => { $crate::mp::map::TMap<$crate::mp::map::TEntry<$K, $V>, $crate::mp::map::TEnd> };
-    ($K:ty: $V:ty, $($K2:ty: $V2:ty),+) => { $crate::mp::map::TMap<$crate::mp::map::TEntry<$K, $V>, tmap!{$($K2: $V2),+}> };
+    ($K:ty: $V:ty,) => { $crate::mpl::TMap<$crate::mpl::TEntry<$K, $V>, $crate::mpl::TEnd> };
+    ($K:ty: $V:ty) => { $crate::mpl::TMap<$crate::mpl::TEntry<$K, $V>, $crate::mpl::TEnd> };
+    ($K:ty: $V:ty, $($K2:ty: $V2:ty),+) => { $crate::mpl::TMap<$crate::mpl::TEntry<$K, $V>, tmap!{$($K2: $V2),+}> };
     ($K:ty: $V:ty, $($K2:ty: $V2:ty),+,) => { tmap!{$K: $V, $($K2: $V2),+} };
 }
 
 //-----------------------------------------------------------------------------
 // Get
 
-/// Type operator to get entry with key `K` from a TypeMap. 
-/// 
-/// # Examples
-/// ```
-/// # use furlong::{tmap, mp::map::*};
-/// # use typenum::*;
-/// assert_type_eq!(
-///     MapGet<
-///         tmap!{U1: P1, U2: P2},
-///         U1
-///     >, P1);
-/// ```
-/// 
-/// Fails if key does not exist
-/// ```compile_fail
-/// # use furlong::{tmap, mp::map::*};
-/// # use typenum::*;
-/// assert_type_eq!(
-///     MapGet<
-///         tmap!{U1: P1, U2: P2},
-///         U3 // Error: Type has no item with key U3
-///     >, P1);
-/// ```
-/// 
-pub trait TypeMapFind<K> {
-    type Output;
-}
-
-impl<K, V> TypeMapFind<K> for TEntry<K, V> {
+impl<K, V> Get<K> for TEntry<K, V> {
     type Output = V;
 }
 
-impl<KFind, E, L> TypeMapFind<KFind> for TMap<E, L>
+impl<K, E, L> Get<K> for TMap<E, L>
 where
     E: TypeMapEntry,
-    TKey<E>: IsEqual<KFind>,
-    MatchIf<Eq<TKey<E>, KFind>, E, L>: Match,
-    Switch<MatchIf<Eq<TKey<E>, KFind>, E, L>>: TypeMapFind<KFind>
+    TKey<E>: IsEqual<K>,
+    MatchIf<Eq<TKey<E>, K>, E, L>: Match,
+    Switch<MatchIf<Eq<TKey<E>, K>, E, L>>: Get<K>
 {
-    type Output = MapGet<Switch<MatchIf<Eq<TKey<E>, KFind>, E, L>>, KFind>;
+    type Output = Entry<Switch<MatchIf<Eq<TKey<E>, K>, E, L>>, K>;
 }
 
-pub type MapGet<L, K> = <L as TypeMapFind<K>>::Output;
+//-----------------------------------------------------------------------------
+// Sort
+
+impl<E0: TypeMapEntry, E1: TypeMapEntry, M: TypeMap + Sort> Sort for TMap<E0, TMap<E1, M>>
+where
+    TKey<E0>: Cmp<TKey<E1>>,
+    TVal<E0>: Add<TVal<E1>>,
+    MatchCmp<
+        Compare<TKey<E0>, TKey<E1>>,
+        TMap<E0, TMap<E1, <M as Sort>::Output>>,
+        TMap<TEntry<TKey<E0>, Sum<TVal<E0>, TVal<E1>>>, <M as Sort>::Output>,
+        TMap<E1, TMap<E0, <M as Sort>::Output>>
+    >: Match
+{
+    type Output = Switch<MatchCmp<
+        Compare<TKey<E0>, TKey<E1>>,
+        TMap<E0, TMap<E1, <M as Sort>::Output>>,
+        TMap<TEntry<TKey<E0>, Sum<TVal<E0>, TVal<E1>>>, <M as Sort>::Output>,
+        TMap<E1, TMap<E0, <M as Sort>::Output>>
+    >>;
+}
+
+impl Sort for TEnd {
+    type Output = TEnd;
+}
 
 //-----------------------------------------------------------------------------
 // Add
@@ -209,7 +205,7 @@ fn tmap_add() {
     type M2 = tmap!{U2: P3};
     type M3 = Sum<M1, M2>;
     assert_type_eq!(M3, tmap!{U1: P2, U2: P3});
-    assert_eq!(<MapGet<M3, U2> as Integer>::I32, 3);
+    assert_eq!(<Entry<M3, U2> as Integer>::I32, 3);
 }
 //-----------------------------------------------------------------------------
 // Sub
@@ -232,13 +228,13 @@ fn tmap_sub() {
     type M2 = tmap!{U2: P3};
     type M3 = Diff<M1, M2>;
     assert_type_eq!(M3, tmap!{U1: P2, U2: N3});
-    assert_eq!(<MapGet<M3, U2> as Integer>::I32, -3);
+    assert_eq!(<Entry<M3, U2> as Integer>::I32, -3);
 
     type M4 = tmap!{U1: P2, U2: P2};
     type M5 = tmap!{U1: P2, U2: P2};
     type M6 = Diff<M4, M5>;
     assert_type_eq!(M6, tmap!{U1: Z0, U2: Z0});
-    assert_eq!(<MapGet<M6, U2> as Integer>::I32, 0);
+    assert_eq!(<Entry<M6, U2> as Integer>::I32, 0);
 }
 
 //-----------------------------------------------------------------------------
