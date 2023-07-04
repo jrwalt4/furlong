@@ -88,6 +88,27 @@ where
 }
 
 //-----------------------------------------------------------------------------
+// GetOr
+
+impl<K, V, Def> GetOr<K, Def> for TEntry<K, V> {
+    type Output = V;
+}
+
+impl<K, E, L, Def> GetOr<K, Def> for TMap<E, L>
+where
+    E: TypeMapEntry,
+    TKey<E>: IsEqual<K>,
+    MatchIf<Eq<TKey<E>, K>, E, L>: Match,
+    Switch<MatchIf<Eq<TKey<E>, K>, E, L>>: GetOr<K, Def>
+{
+    type Output = EntryOr<Switch<MatchIf<Eq<TKey<E>, K>, E, L>>, K, Def>;
+}
+
+impl<K, Def> GetOr<K, Def> for TEnd {
+    type Output = Def;
+}
+
+//-----------------------------------------------------------------------------
 // Sort
 
 impl<E0: TypeMapEntry, E1: TypeMapEntry, M: TypeMap + Sort> Sort for TMap<E0, TMap<E1, M>>

@@ -58,7 +58,7 @@ impl<L, E, G> Match for MatchCmp<Greater, L, E, G> {
 /// 
 /// Fails if key does not exist
 /// ```compile_fail
-/// # use furlong::{tmap, mpl:::*};
+/// # use furlong::{tmap, mpl::*};
 /// # use typenum::*;
 /// assert_type_eq!(
 ///     Entry<
@@ -72,6 +72,41 @@ pub trait Get<K> {
 }
 
 pub type Entry<L, K> = <L as Get<K>>::Output;
+
+//-----------------------------------------------------------------------------
+// GetOr
+
+/// Type operator to get retrieve an entry with key `K` or a default
+/// 
+/// # Examples
+/// ```
+/// # use furlong::{tmap, mpl::*};
+/// # use typenum::*;
+/// assert_type_eq!(
+///     EntryOr<
+///         tmap!{U1: P1, U2: P2},
+///         U1,
+///         ()
+///     >, P1);
+/// ```
+/// 
+/// Returns default if key does not exist
+/// ```
+/// # use furlong::{tmap, mpl::*};
+/// # use typenum::*;
+/// assert_type_eq!(
+///     EntryOr<
+///         tmap!{U1: P1, U2: P2},
+///         U3, // Type has no item with key U3
+///         Z0
+///     >, Z0);
+/// ```
+/// 
+pub trait GetOr<K, Def> {
+    type Output;
+}
+
+pub type EntryOr<L, K, Def> = <L as GetOr<K, Def>>::Output;
 
 //-----------------------------------------------------------------------------
 // Sort
