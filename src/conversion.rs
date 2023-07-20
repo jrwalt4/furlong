@@ -1,6 +1,4 @@
-use std::{
-    ops::{Mul, Div}
-};
+use std::ops::{Mul, Div};
 use typenum::*;
 
 /// A value that can apply a conversion factor
@@ -64,12 +62,26 @@ impl<const I: u32, F: ConversionFactor> Div<F> for ConvInt<I> {
     }
 }
 
+impl<const I: u32, Exp: Integer> Pow<Exp> for ConvInt<I> {
+    type Output = ConvPow<Self, Exp>;
+    fn powi(self, exp: Exp) -> Self::Output {
+        ConvPow(self, exp)
+    }
+}
+
 pub struct ConvRecip<C>(C);
 
 impl<C: ConversionFactor> ConversionFactor for ConvRecip<C> {
     const REAL: f64 = 1.0 / C::REAL;
     const NUM: u32 = C::DEN;
     const DEN: u32 = C::NUM;
+}
+
+impl<C: ConversionFactor, Exp: Integer> Pow<Exp> for ConvRecip<C> {
+    type Output = ConvPow<Self, Exp>;
+    fn powi(self, exp: Exp) -> Self::Output {
+        ConvPow(self, exp)
+    }
 }
 
 pub type ConvRatio<const N: u32, const D: u32> = ConvQuot<ConvInt<N>, ConvInt<D>>;
@@ -96,13 +108,14 @@ impl<A: ConversionFactor, B: ConversionFactor> ConversionFactor for ConvProd<A, 
     const DEN: u32 = A::DEN * B::DEN;
 }
 
-pub struct ConvQuot<A, B>(A, B);
-
-impl<A: ConversionFactor, B: ConversionFactor> ConversionFactor for ConvQuot<A, B> {
-    const REAL: f64 = A::REAL / B::REAL;
-    const NUM: u32 = A::NUM * B::DEN;
-    const DEN: u32 = A::DEN * B::NUM;
+impl<A: ConversionFactor, B: ConversionFactor, Exp: Integer> Pow<Exp> for ConvProd<A, B> {
+    type Output = ConvPow<Self, Exp>;
+    fn powi(self, exp: Exp) -> Self::Output {
+        ConvPow(self, exp)
+    }
 }
+
+pub type ConvQuot<A, B> = ConvProd<A, ConvRecip<B>>;
 
 pub struct ConvPow<C, N>(C, N);
 
@@ -223,7 +236,7 @@ mod tests {
         assert_eq!(PInv::REAL, 1.0 / P::REAL);
 
         // Compound multiplication
-        type ABC = ConvProd<ConvProd<ConvRatio<1,2>, ConvRatio<3,4>>,ConvRatio<5,6>>;
-        assert_eq!(ABC::REAL, 1.0 * 3.0 * 5.0 / (2.0 * 4.0 * 6.0));
+        type Comp = ConvProd<ConvProd<ConvRatio<1,2>, ConvRatio<3,4>>,ConvRatio<5,6>>;
+        assert_eq!(Comp::REAL, 1.0 * 3.0 * 5.0 / (2.0 * 4.0 * 6.0));
     }
 }

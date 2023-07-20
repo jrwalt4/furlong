@@ -1,153 +1,88 @@
-use typenum::{
-    array::{ATerm, TArr},
-    consts::*,
-    marker_traits::{Bit, Unsigned},
-    operator_aliases::{Diff, Prod, Sub1},
-    uint::UInt,
-    tarr
-};
+use typenum::*;
+
+use crate::{mpl::*, tmap};
 
 /// A base dimension of mass, length, time, electrical current, etc.
-/// 
-/// The [`Ordinal`](BaseDimension::Ordinal) is used to index base dimension
-/// exponents within a [`DimList`]
+///
+/// The [`Ordinal`](BaseDimension::Ordinal) is used as the key
+/// for a dimension list.
 pub trait BaseDimension {
     type Ordinal: Unsigned;
 }
 
-pub struct MassBaseDimension;
-impl BaseDimension for MassBaseDimension {
-    type Ordinal = U0;
+#[macro_export]
+macro_rules! base_dim {
+    ($D:ident, $Ord:ty) => {
+        #[derive(Copy, Clone, Debug, Default)]
+        pub struct $D;
+        impl $crate::dimension::BaseDimension for $D {
+            type Ordinal = $Ord;
+        }
+        impl<BD: $crate::dimension::BaseDimension> ::typenum::Cmp<BD> for $D
+        where
+            $Ord: Cmp<<BD as $crate::dimension::BaseDimension>::Ordinal>,
+        {
+            type Output = Compare<$Ord, <BD as $crate::dimension::BaseDimension>::Ordinal>;
+            fn compare<IM: private::InternalMarker>(&self, _: &BD) -> Self::Output {
+                unimplemented!()
+            }
+        }
+    };
 }
 
-pub struct LengthBaseDimension;
-impl BaseDimension for LengthBaseDimension {
-    type Ordinal = U1;
-}
+base_dim!(MassBase, U0);
+base_dim!(LengthBase, U1);
+base_dim!(TimeBase, U2);
 
-pub struct TimeBaseDimension;
-impl BaseDimension for TimeBaseDimension {
-    type Ordinal = U2;
-}
-
-pub trait DimPart<D: BaseDimension> {
-    type Exponent;
-}
-
-/// List of [`BaseDimension`] exponents, indexed by [`Ordinal`](BaseDimension::Ordinal).
-pub type DimList<E, DL> = TArr<E, DL>;
-
-/// Type Operator for accessing the `I`th element of a [`DimList`]. 
-/// 
-/// A list is searched in linear order, reducing the index `I` at each step and
-/// continuing with the inner [`TArr`]. 
-/// Once the index has reach [`U0`], we have found the item. 
-pub trait Item<I> {
-    type Output;
-}
-
-impl<V, A, U: Unsigned, B: Bit> Item<UInt<U, B>> for TArr<V, A>
-where
-    UInt<U, B>: std::ops::Sub<B1>,
-    A: Item<Sub1<UInt<U, B>>>,
-    Sub1<UInt<U, B>>: Unsigned
-{
-    type Output = <A as Item<Sub1<UInt<U, B>>>>::Output;
-}
-
-/// The search index has reached U0, so we've found our item. 
-impl<V, A> Item<U0> for TArr<V, A> {
-    type Output = V;
-}
-
-/// Type Alias for the `I`'th item of list `L`.
-pub(crate) type GetItem<L, I> = <L as Item<I>>::Output;
-
-pub(crate) trait TypeIter {
-    type Next;
-}
-
-impl<V, A> TypeIter for TArr<V, A> {
-    type Next = A;
-}
-
-/// Type representing no dimension where all exponents are 0. 
-/// Since every [`TArr`] ends with [`ATerm`], having dimensionless
-/// at the end will default all base dimensions to 0 if they are not
-/// present in the [`DimList`]. 
-pub type Dimensionless = ATerm;
-
-/// [`Dimensionless`] (i.e. [`ATerm`]) is always [`Z0`]
-impl<U> Item<U> for Dimensionless {
-    type Output = Z0;
-}
-
-impl<BD: BaseDimension> DimPart<BD> for Dimensionless {
-    type Exponent = Z0;
-}
-
-impl<BD: BaseDimension, DI, DL> DimPart<BD> for TArr<DI, DL>
-where
-    Self: Item<BD::Ordinal>
-{
-    type Exponent = GetItem<Self, BD::Ordinal>;
-}
-
-pub type GetDimPart<D, P> = <D as DimPart<P>>::Exponent;
+pub type Dimensionless = TEnd;
 
 pub trait SameDimension<D> {}
 
 /// [`SameDimension`] if each exponent is the same throughout the list
-impl<E, D1, D2: SameDimension<D1>> SameDimension<DimList<E, D2>> for DimList<E, D1> {}
-
-impl<DL: SameDimension<Dimensionless>> SameDimension<Dimensionless> for TArr<Z0, DL> {}
+impl<E, D1, D2: SameDimension<D1>> SameDimension<TMap<E, D2>> for TMap<E, D1> {}
 
 impl SameDimension<Dimensionless> for Dimensionless {}
 
 #[cfg(test)]
 mod dim_list {
     use super::*;
-    use typenum::*;
-    #[test]
-    fn get_item() {
-        #[allow(dead_code)]
-        type TA = tarr![P1, P2, P3];
-        assert_type_eq!(GetItem<TA, U0>, P1);
-        assert_type_eq!(GetItem<TA, U1>, P2);
-        assert_type_eq!(GetItem<TA, U2>, P3);
-    }
+    use crate::tmap;
 
     #[test]
     fn dim_list() {
         #[allow(dead_code)]
-        type DList = tarr![P1, P2];
-        assert_type_eq!(GetDimPart<DList, MassBaseDimension>, P1);
-        assert_type_eq!(GetDimPart<DList, LengthBaseDimension>, P2);
+        type DList = tmap! {MassBase: P1, LengthBase: P2};
+        assert_type_eq!(Entry<DList, MassBase>, P1);
+        assert_type_eq!(Entry<DList, LengthBase>, P2);
 
         // No Time dimension given, so defaults to Z0.
-        assert_type_eq!(GetDimPart<DList, TimeBaseDimension>, Z0);
+        assert_type_eq!(EntryOr<DList, TimeBase, Z0>, Z0);
     }
 
     #[test]
     fn dim_list_operations() {
         #[allow(dead_code)]
-        type Dim1 = tarr![P1, P2, P1];
+        type Dim1 = tmap! {MassBase: P1, LengthBase: P2, TimeBase: P1};
         #[allow(dead_code)]
-        type Dim2 = tarr![Z0, N1, N1];
-
-        assert_type_eq!(Sum<Dim1, Dim2>, tarr![P1, P1, Z0]);
-
-        assert_type_eq!(Diff<Dim1, Dim2>, tarr![P1, P3, P2]);
-
-        assert_type_eq!(Prod<Dim1, P2>, tarr![P2, P4, P2]);
-        assert_type_eq!(Prod<Dim2, P2>, tarr![Z0, N2, N2]);
+        type Dim2 = tmap! {MassBase: Z0, LengthBase: N1, TimeBase: N1};
+        assert_type_eq!(Sum<Dim1, Dim2>, tmap!{MassBase: P1, LengthBase: P1, TimeBase: Z0});
+        assert_type_eq!(Diff<Dim1, Dim2>, tmap!{MassBase: P1, LengthBase: P3, TimeBase: P2});
+        assert_type_eq!(Prod<Dim1, P2>, tmap!{MassBase: P2, LengthBase: P4, TimeBase: P2});
+        assert_type_eq!(Prod<Dim2, P2>, tmap!{MassBase: Z0, LengthBase: N2, TimeBase: N2});
     }
 
     #[test]
     fn same_dimension() {
         use std::marker::PhantomData;
-        fn assert_same_dimension<D1, D2: SameDimension<D1>>(_: PhantomData<D1>, _: PhantomData<D2>) {}
-        assert_same_dimension::<tarr![P1, P2], tarr![P1, P2, Z0, Z0]>(PhantomData, PhantomData);
+        fn assert_same_dimension<D1, D2: SameDimension<D1>>(
+            _: PhantomData<D1>,
+            _: PhantomData<D2>,
+        ) {
+        }
+        assert_same_dimension::<
+            tmap! {MassBase: P1, LengthBase: P2},
+            tmap! {MassBase: P1, LengthBase: P2},
+        >(PhantomData, PhantomData);
     }
 }
 
@@ -159,15 +94,15 @@ pub type Dimension<
     // Temperature=Z0, 
     // Light=Z0, 
     // Amount=Z0
-> = tarr![
-    Mass, 
-    Length, 
-    Time, 
-    // Current, 
-    // Temperature, 
-    // Light, 
+> = Sorted<tmap! {
+    MassBase: Mass,
+    LengthBase: Length,
+    TimeBase: Time,
+    // Current,
+    // Temperature,
+    // Light,
     // Amount
-];
+}>;
 
 pub type MassDimension = Dimension<P1, Z0, Z0>;
 

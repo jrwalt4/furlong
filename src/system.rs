@@ -1,8 +1,4 @@
-use crate::{
-    base_unit::*,
-    dimension::*,
-    unit::*,
-};
+use crate::{base_unit::*, dimension::*, tmap, unit::*};
 
 pub type Mass<S> = SystemUnit<S, MassDimension>;
 pub type Length<S> = SystemUnit<S, LengthDimension>;
@@ -13,11 +9,11 @@ pub type Velocity<S> = SystemUnit<S, VelocityDimension>;
 pub mod si {
     use super::*;
 
-    pub type System = MakeSystem<
-        mass::KilogramBaseUnit,
-        length::MeterBaseUnit,
-        time::SecondBaseUnit
-    >;
+    pub type System = tmap! {
+        MassBase: mass::KilogramBaseUnit,
+        LengthBase: length::MeterBaseUnit,
+        TimeBase: time::SecondBaseUnit,
+    };
 
     pub type Meters = Length<System>;
     pub type Centimeters = ScaledUnit<Meters, 1, 1000>;
@@ -41,12 +37,12 @@ pub mod si {
 
 pub mod imperial {
     use super::*;
-    
-    pub type System = MakeSystem<
-        mass::SlugBaseUnit,
-        length::FootBaseUnit,
-        time::SecondBaseUnit
-    >;
+
+    pub type System = tmap! {
+        MassBase: mass::SlugBaseUnit,
+        LengthBase: length::FootBaseUnit,
+        TimeBase: time::SecondBaseUnit,
+    };
 
     pub type Feet = Length<System>;
     pub type Yards = ScaledUnit<Feet, 3>;

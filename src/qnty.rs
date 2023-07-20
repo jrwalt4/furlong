@@ -184,11 +184,22 @@ impl<U: UnitInfo, T: Display> Display for Qnty<U, T> {
     }
 }
 
+#[cfg(fmt)]
 impl<U: UnitInfo, T: Debug> Debug for Qnty<U, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.debug_struct("Qnty")
             .field("value", &self.value)
             .field("unit", &U::abbr())
+            .finish()
+    }
+}
+
+#[cfg(not(fmt))]
+impl<U, T: Debug> Debug for Qnty<U, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.debug_struct("Qnty")
+            .field("value", &self.value)
+            .field("unit", &"_")
             .finish()
     }
 }
@@ -214,11 +225,13 @@ where Self: Add<Output = Self> {
 
 #[cfg(test)]
 mod test {
+    #[cfg(fmt)]
+    use crate::unit::UnitInfo;
+    #[cfg(fmt)]
     use std::fmt::Display;
     
     use crate::{
         qnty::Qnty,
-        unit::UnitInfo,
         system::{
             Area, Velocity,
             si::{System as SI, Kilometers, Meters, Seconds},
@@ -331,6 +344,7 @@ mod test {
         assert_eq!(l1, l2);
     }
 
+    #[cfg(fmt)]
     #[test]
     fn unit_info() {
         type U = Meters;
@@ -338,7 +352,8 @@ mod test {
         let length = Meters::new(3.0);
         assert_eq!(format!("{length:.3}"), "3.000 m");
     }
-
+    
+    #[cfg(fmt)]
     #[test]
     fn generic_unit_info() {
         // test Display for i32

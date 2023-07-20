@@ -2,10 +2,10 @@
 
 use super::*;
 
-use std::ops::{Add, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 
 use typenum::{
-    operator_aliases::{Compare, Eq, Negate, Sum},
+    operator_aliases::{Compare, Eq, Negate, Prod, Sum},
     type_operators::{Cmp, IsEqual}
 };
 
@@ -111,27 +111,62 @@ impl<K, Def> GetOr<K, Def> for TEnd {
 //-----------------------------------------------------------------------------
 // Sort
 
-impl<E0: TypeMapEntry, E1: TypeMapEntry, M: TypeMap + Sort> Sort for TMap<E0, TMap<E1, M>>
+impl<E: TypeMapEntry, M> Sort for TMap<E, M>
 where
-    TKey<E0>: Cmp<TKey<E1>>,
-    TVal<E0>: Add<TVal<E1>>,
-    MatchCmp<
-        Compare<TKey<E0>, TKey<E1>>,
-        TMap<E0, TMap<E1, <M as Sort>::Output>>,
-        TMap<TEntry<TKey<E0>, Sum<TVal<E0>, TVal<E1>>>, <M as Sort>::Output>,
-        TMap<E1, TMap<E0, <M as Sort>::Output>>
-    >: Match
+    M: InnerMapCmp<TKey<E>> + InnerMapSort<E, InnerMapCmpOut<M, TKey<E>>>
 {
-    type Output = Switch<MatchCmp<
-        Compare<TKey<E0>, TKey<E1>>,
-        TMap<E0, TMap<E1, <M as Sort>::Output>>,
-        TMap<TEntry<TKey<E0>, Sum<TVal<E0>, TVal<E1>>>, <M as Sort>::Output>,
-        TMap<E1, TMap<E0, <M as Sort>::Output>>
-    >>;
+    type Output = <M as InnerMapSort<E, InnerMapCmpOut<M, TKey<E>>>>::Output;
 }
 
 impl Sort for TEnd {
-    type Output = TEnd;
+    type Output = Self;
+}
+
+pub trait InnerMapSort<E, C> {
+    type Output;
+}
+
+/// If entries have equal keys, `Add` the values
+impl<E: TypeMapEntry, M: Sort, Er: TypeMapEntry> InnerMapSort<Er, Equal> for TMap<E, M>
+where
+    TVal<E>: Add<TVal<Er>>
+{
+    type Output = TMap<TEntry<TKey<E>, Sum<TVal<E>, TVal<Er>>>, Sorted<M>>;
+}
+
+impl<E: TypeMapEntry, M, Er> InnerMapSort<Er, Less> for TMap<E, M>
+where
+    TMap<Er, M>: Sort
+{
+    type Output = TMap<E, Sorted<TMap<Er, M>>>;
+}
+
+impl<E: TypeMapEntry, M, Er> InnerMapSort<Er, Greater> for TMap<E, M>
+where
+    Self: Sort
+{
+    type Output = TMap<Er, Sorted<Self>>;
+}
+
+impl<E, C> InnerMapSort<E, C> for TEnd {
+    type Output = TMap<E, TEnd>;
+}
+
+pub trait InnerMapCmp<K> {
+    type Output;
+}
+
+pub type InnerMapCmpOut<M, K> = <M as InnerMapCmp<K>>::Output;
+
+impl<E: TypeMapEntry, M, K> InnerMapCmp<K> for TMap<E, M>
+where
+    TKey<E>: Cmp<K>
+{
+    type Output = Compare<TKey<E>, K>;
+}
+
+impl<K> InnerMapCmp<K> for TEnd {
+    type Output = Greater;
 }
 
 //-----------------------------------------------------------------------------
@@ -228,6 +263,7 @@ fn tmap_add() {
     assert_type_eq!(M3, tmap!{U1: P2, U2: P3});
     assert_eq!(<Entry<M3, U2> as Integer>::I32, 3);
 }
+
 //-----------------------------------------------------------------------------
 // Sub
 
@@ -256,6 +292,29 @@ fn tmap_sub() {
     type M6 = Diff<M4, M5>;
     assert_type_eq!(M6, tmap!{U1: Z0, U2: Z0});
     assert_eq!(<Entry<M6, U2> as Integer>::I32, 0);
+}
+
+//-----------------------------------------------------------------------------
+// Mul
+
+impl<E: TypeMapEntry, M: TypeMap, I> Mul<I> for TMap<E, M>
+where
+    TVal<E>: Mul<I>,
+    M: Mul<I>,
+{
+    type Output = TMap<TEntry<TKey<E>, Prod<TVal<E>, I>>, Prod<M, I>>;
+
+    fn mul(self, _rhs: I) -> Self::Output {
+        unimplemented!()
+    }
+}
+
+impl<I> Mul<I> for TEnd {
+    type Output = TEnd;
+
+    fn mul(self, _: I) -> Self::Output {
+        self
+    }
 }
 
 //-----------------------------------------------------------------------------

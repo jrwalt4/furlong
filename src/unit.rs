@@ -1,10 +1,11 @@
 use std::marker::PhantomData as PD;
 use std::ops::{Add, Div, Mul, Sub};
-use typenum::{Integer, Diff, Sum, ATerm, TArr, tarr};
+use typenum::{Cmp, Compare, Diff, Equal, Exp, Less, Pow, Sum};
 
 use crate::{
     conversion::*,
     dimension::*,
+    mpl::*,
     qnty::Qnty,
 };
 
@@ -76,24 +77,6 @@ pub trait UnitInfo: Unit {
     fn abbr() -> String;
 }
 
-pub trait UnitSystemPart<D: BaseDimension> {
-    type Base: BaseUnit;
-}
-
-pub type GetBase<S, D> = <S as UnitSystemPart<D>>::Base;
-
-pub type MakeSystem<MassBase, LengthBase, TimeBase> = tarr![MassBase, LengthBase, TimeBase];
-
-pub type Unitless = ATerm;
-
-impl<BD: BaseDimension, UI, UL> UnitSystemPart<BD> for TArr<UI, UL>
-where
-    Self: Item<BD::Ordinal>,
-    GetItem<Self, BD::Ordinal>: BaseUnit
-{
-    type Base = GetItem<Self, BD::Ordinal>;
-}
-
 pub struct SystemUnit<S, D> {
     system: PD<S>,
     dimension: PD<D>,
@@ -110,6 +93,7 @@ impl<S, D> Unit for SystemUnit<S, D> {
     type Dim = D;
 }
 
+#[cfg(fmt)]
 impl<S, D> UnitInfo for SystemUnit<S, D>
 where
     S: UnitSystemPart<MassBaseDimension> + UnitSystemPart<LengthBaseDimension> + UnitSystemPart<TimeBaseDimension>,
@@ -171,10 +155,10 @@ where
     }
 }
 
-pub type GetSystemUnit<U> = SystemUnit<<U as Unit>::System, <U as Unit>::Dim>;
+type AsSystemUnit<U> = SystemUnit<<U as Unit>::System, <U as Unit>::Dim>;
 
 pub struct ScaledUnit<U, const NUM: u32, const DEN: u32 = 1> {
-    unit: PD<U>
+    _unit: U,
 }
 
 impl<U: Unit, const NUM: u32, const DEN: u32> Unit for ScaledUnit<U, NUM, DEN> {
@@ -183,29 +167,94 @@ impl<U: Unit, const NUM: u32, const DEN: u32> Unit for ScaledUnit<U, NUM, DEN> {
 }
 
 impl<U: Unit, const NUM: u32, const DEN: u32> ScaledUnit<U, NUM, DEN> {
-    pub fn new<T: Convertible>(value: T) -> Qnty<Self, T> 
-    where U: ConversionTo<GetSystemUnit<U>> {
-        Qnty::from_raw_value(value.convert::<Conversion<Self, GetSystemUnit<U>>>())
+    pub fn new<T: Convertible>(value: T) -> Qnty<Self, T>
+    where
+        U: ConversionTo<AsSystemUnit<U>>,
+    {
+        Qnty::from_raw_value(value.convert::<Conversion<Self, AsSystemUnit<U>>>())
     }
 }
 
-impl<BU1, BURest1, BU2, BURest2, D, DRest> 
-    ConversionTo<SystemUnit<TArr<BU2, BURest2>, TArr<D, DRest>>>
-for 
-    SystemUnit<TArr<BU1, BURest1>, TArr<D, DRest>>
-where
-    BU1: ConversionTo<BU2>,
-    ConvPow<Conversion<BU1, BU2>, D>: ConversionFactor,
-    SystemUnit<BURest1, DRest>: ConversionTo<SystemUnit<BURest2, DRest>>
-{
-    type Factor = ConvProd<
-                    ConvPow<Conversion<BU1, BU2>, D>,
-                    Conversion<SystemUnit<BURest1, DRest>, SystemUnit<BURest2, DRest>>
-                >;
+/// Private helper for calculating conversion factor for individual base dimensions
+/// within a system/dimension pair.
+pub trait SystemConversionTo<Sys, Dim> {
+    type Output;
 }
 
-impl ConversionTo<SystemUnit<ATerm, ATerm>> for SystemUnit<ATerm, ATerm> {
-    type Factor = ConvInt<1>;
+pub type SystemConversion<From, To, Dim> = <From as SystemConversionTo<To, Dim>>::Output;
+
+/// Private-Private helper for calculating conversion factor for individual base dimensions
+/// within a system/dimension pair.
+///
+/// Sys = System converting to
+///
+/// Dim = Exponent of dimension
+///
+/// C = Comparison of base dimension keys in the Sys and Dimension parameters
+/// (so we know we're using the correct base)
+pub trait InnerSystemConversionTo<Sys, Dim, C> {
+    type Output;
+}
+
+pub type InnerSystemConversion<From, To, Dim, C> =
+    <From as InnerSystemConversionTo<To, Dim, C>>::Output;
+
+impl<El, Ml, Er, Mr, Ed, Md> SystemConversionTo<TMap<Er, Mr>, TMap<Ed, Md>> for TMap<El, Ml>
+where
+    El: TypeMapEntry,
+    Ed: TypeMapEntry,
+    TKey<El>: Cmp<TKey<Ed>>,
+    TMap<El, Ml>: InnerSystemConversionTo<TMap<Er, Mr>, TMap<Ed, Md>, Compare<TKey<El>, TKey<Ed>>>,
+{
+    type Output = InnerSystemConversion<
+        TMap<El, Ml>,
+        TMap<Er, Mr>,
+        TMap<Ed, Md>,
+        Compare<TKey<El>, TKey<Ed>>,
+    >;
+}
+
+impl SystemConversionTo<TEnd, TEnd> for TEnd {
+    type Output = ConvInt<1>;
+}
+
+impl<El, Ml, Er, Mr> SystemConversionTo<TMap<Er, Mr>, TEnd> for TMap<El, Ml> {
+    type Output = ConvInt<1>;
+}
+
+/// Key of dimension list matches key of base unit list, so apply exponent to conversion
+impl<El, Ml, Er, Mr, Ed, Md> InnerSystemConversionTo<TMap<Er, Mr>, TMap<Ed, Md>, Equal>
+    for TMap<El, Ml>
+where
+    El: TypeMapEntry,
+    Er: TypeMapEntry,
+    Ed: TypeMapEntry,
+    TVal<El>: ConversionTo<TVal<Er>>,
+    Conversion<TVal<El>, TVal<Er>>: Pow<TVal<Ed>>,
+    Ml: SystemConversionTo<Mr, Md>,
+    ConvProd<Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>, SystemConversion<Ml, Mr, Md>>:
+        ConversionFactor,
+{
+    type Output =
+        ConvProd<Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>, SystemConversion<Ml, Mr, Md>>;
+}
+
+/// We have an entry in the system unit list that doesn't existing in the dimension, keep looking
+impl<El, Ml, Er, Mr, Ed, Md> InnerSystemConversionTo<TMap<Er, Mr>, TMap<Ed, Md>, Less>
+    for TMap<El, Ml>
+where
+    Ml: SystemConversionTo<Mr, TMap<Ed, Md>>,
+{
+    type Output = SystemConversion<Ml, Mr, TMap<Ed, Md>>;
+}
+
+impl<Sys1, Dim1, Sys2, Dim2> ConversionTo<SystemUnit<Sys2, Dim2>> for SystemUnit<Sys1, Dim1>
+where
+    Dim1: SameDimension<Dim2>,
+    Sys1: SystemConversionTo<Sys2, Dim1>,
+    SystemConversion<Sys1, Sys2, Dim1>: ConversionFactor,
+{
+    type Factor = SystemConversion<Sys1, Sys2, Dim1>;
 }
 
 /// Convert from a scaled unit to the base unit of a system (used with `Unit::new()`)
@@ -244,8 +293,16 @@ mod test {
 
     macro_rules! assert_conv {
         ($val1:literal $U1:ty = $val2:literal $U2:ty) => {
-            approx::assert_relative_eq!(<Conversion::<$U1, $U2> as ConversionFactor>::REAL, $val2 as f64 / $val1 as f64, epsilon=f32::EPSILON as f64);
-            approx::assert_relative_eq!(<Conversion::<$U2, $U1> as ConversionFactor>::REAL, $val1 as f64 / $val2 as f64, epsilon=f32::EPSILON as f64);
+            approx::assert_relative_eq!(
+                <Conversion::<$U1, $U2> as ConversionFactor>::REAL,
+                $val2 as f64 / $val1 as f64,
+                epsilon = f32::EPSILON as f64
+            );
+            approx::assert_relative_eq!(
+                <Conversion::<$U2, $U1> as ConversionFactor>::REAL,
+                $val1 as f64 / $val2 as f64,
+                epsilon = f32::EPSILON as f64
+            );
         };
     }
 
@@ -259,7 +316,13 @@ mod test {
     }
 
     #[test]
+    fn conversion_impl() {
+        assert_eq!(<<SI as SystemConversionTo<SI, LengthDimension>>::Output as ConversionFactor>::REAL, 1.0);
+    }
+
+    #[test]
     fn simple_conversions() {
+        assert_conv!(1 Meters = 1 Meters);        
         assert_conv!(1 Kilometers = 1_000 Meters);
         assert_conv!(1 Meters = 1_000 Centimeters);
 

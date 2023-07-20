@@ -6,7 +6,7 @@ use crate::{
 
 pub struct MeterBaseUnit;
 impl BaseUnitTag for MeterBaseUnit {
-    type Dimension = LengthBaseDimension;
+    type Dimension = LengthBase;
 }
 impl BaseUnitInfo for MeterBaseUnit {
     const NAME: Info = "meter";
@@ -15,7 +15,7 @@ impl BaseUnitInfo for MeterBaseUnit {
 
 pub struct YardBaseUnit;
 impl BaseUnitTag for YardBaseUnit {
-    type Dimension = LengthBaseDimension;
+    type Dimension = LengthBase;
 }
 impl BaseUnitInfo for YardBaseUnit {
     const NAME: Info = "yard";

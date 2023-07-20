@@ -5,7 +5,7 @@ use crate::{
 
 pub struct SecondBaseUnit;
 impl BaseUnitTag for SecondBaseUnit {
-    type Dimension = TimeBaseDimension;
+    type Dimension = TimeBase;
 }
 impl BaseUnitInfo for SecondBaseUnit {
     const NAME: Info = "second";

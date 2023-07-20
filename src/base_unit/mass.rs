@@ -6,7 +6,7 @@ use crate::{
 
 pub struct GramBaseUnit;
 impl BaseUnitTag for GramBaseUnit {
-    type Dimension = MassBaseDimension;
+    type Dimension = MassBase;
 }
 impl BaseUnitInfo for GramBaseUnit {
     const NAME: Info = "gram";
@@ -21,7 +21,7 @@ impl BaseUnitInfo for KilogramBaseUnit {
 
 pub struct SlugBaseUnit;
 impl BaseUnitTag for SlugBaseUnit {
-    type Dimension = MassBaseDimension;
+    type Dimension = MassBase;
 }
 
 impl ConversionTo<GramBaseUnit> for SlugBaseUnit {
