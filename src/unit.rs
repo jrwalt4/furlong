@@ -1,6 +1,6 @@
 use std::marker::PhantomData as PD;
 use std::ops::{Add, Div, Mul, Sub};
-use typenum::{Cmp, Compare, Diff, Equal, Exp, Less, Pow, Sum};
+use typenum::*;
 
 use crate::{
     conversion::*,
@@ -20,45 +20,71 @@ pub trait BaseUnit {
 
     /// Conversion to [`BaseUnit::Base`]
     /// (i.e. how many `Base`'s are in 1 of Self)
-    type Scale: ConversionFactor;
+    type Scale: UnsignedRational;
 }
+
+type UF1 = UFrac<U1>;
 
 impl<B: BaseUnitTag> BaseUnit for B {
     type Base = Self;
-    type Scale = ConvInt<1>;
+    type Scale = UF1;
 }
 
 impl<B: BaseUnitTag> ConversionTo<B> for B {
-    type Factor = ConvInt<1>;
+    type Factor = UF1;
 }
 
-pub struct ScaledBaseUnit<B, const N: u32, const D: u32 = 1> {
-    base: PD<B>,
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Debug, Default)]
+pub struct ScaledBaseUnit<B, R = UF1> {
+    base: B,
+    scale: R,
 }
 
-impl<B: BaseUnit, const N: u32, const D: u32> BaseUnit for ScaledBaseUnit<B, N, D>  {
-    type Base = <B as BaseUnit>::Base;
-    type Scale = ConvProd<ConvRatio<N,D>,<B as BaseUnit>::Scale>;
+impl<B: Default, R: UnsignedRational> ScaledBaseUnit<B, R> {
+    pub fn new() -> Self {
+        Default::default()
+    }
 }
 
-impl<B1: BaseUnit, const N: u32, const D: u32, B2: BaseUnitTag> ConversionTo<B2> for ScaledBaseUnit<B1, N, D>
-where <B1 as BaseUnit>::Base: ConversionTo<B2> {
-    type Factor = ConvProd<<Self as BaseUnit>::Scale, Conversion<<B1 as BaseUnit>::Base, B2>>;
-}
-
-impl<B1: BaseUnitTag, const N: u32, const D: u32, B2: BaseUnit> ConversionTo<ScaledBaseUnit<B2, N, D>> for B1
-where B1: ConversionTo<<B2 as BaseUnit>::Base> {
-    type Factor = ConvQuot<Conversion<B1, <B2 as BaseUnit>::Base>, <ScaledBaseUnit<B2, N, D> as BaseUnit>::Scale>;
-}
-
-impl<
-    B1: BaseUnit, const N1: u32, const D1: u32, 
-    B2: BaseUnit, const N2: u32, const D2: u32
-> ConversionTo<ScaledBaseUnit<B2, N2, D2>> for ScaledBaseUnit<B1, N1, D1>
+impl<B: BaseUnit, R: UnsignedRational> BaseUnit for ScaledBaseUnit<B, R>
 where
-    B1: ConversionTo<B2>
+    R: Mul<<B as BaseUnit>::Scale>,
+    Prod<R,<B as BaseUnit>::Scale>: UnsignedRational,
 {
-    type Factor = ConvQuot<ConvProd<<Self as BaseUnit>::Scale, Conversion<B1,B2>>,<ScaledBaseUnit<B2, N2, D2> as BaseUnit>::Scale>;
+    type Base = <B as BaseUnit>::Base;
+    type Scale = Prod<R,<B as BaseUnit>::Scale>;
+}
+
+impl<B1, R1, B2: BaseUnitTag> ConversionTo<B2> for ScaledBaseUnit<B1, R1>
+where
+    Self: BaseUnit,
+    <Self as BaseUnit>::Base: ConversionTo<B2>,
+    <Self as BaseUnit>::Scale: Mul<Conversion<<Self as BaseUnit>::Base, B2>>,
+    Prod<<Self as BaseUnit>::Scale, Conversion<<Self as BaseUnit>::Base, B2>>: UnsignedRational,
+{
+    type Factor = Prod<<Self as BaseUnit>::Scale, Conversion<<Self as BaseUnit>::Base, B2>>;
+}
+
+impl<B1, B2: BaseUnit, R2: UnsignedRational> ConversionTo<ScaledBaseUnit<B2, R2>> for B1
+where
+    B1: BaseUnitTag + ConversionTo<<B2 as BaseUnit>::Base>,
+    ScaledBaseUnit<B2, R2>: BaseUnit,
+    Conversion<B1, <B2 as BaseUnit>::Base>: Div<<ScaledBaseUnit<B2, R2> as BaseUnit>::Scale>,
+    Quot<Conversion<B1, <B2 as BaseUnit>::Base>, <ScaledBaseUnit<B2, R2> as BaseUnit>::Scale>: UnsignedRational,
+{
+    type Factor = Quot<Conversion<B1, <B2 as BaseUnit>::Base>, <ScaledBaseUnit<B2, R2> as BaseUnit>::Scale>;
+}
+
+impl<B1, R1, B2, R2> ConversionTo<ScaledBaseUnit<B2, R2>> for ScaledBaseUnit<B1, R1>
+where
+    Self: BaseUnit,
+    ScaledBaseUnit<B2, R2>: BaseUnit,
+    B1: ConversionTo<B2>,
+    <Self as BaseUnit>::Scale: Mul<Conversion<B1,B2>>,
+    Prod<<Self as BaseUnit>::Scale, Conversion<B1,B2>>: Div<<ScaledBaseUnit<B2, R2> as BaseUnit>::Scale>,
+    Quot<Prod<<Self as BaseUnit>::Scale, Conversion<B1,B2>>,<ScaledBaseUnit<B2, R2> as BaseUnit>::Scale>: UnsignedRational,
+{
+    type Factor = Quot<Prod<<Self as BaseUnit>::Scale, Conversion<B1,B2>>,<ScaledBaseUnit<B2, R2> as BaseUnit>::Scale>;
 }
 
 pub type Info = &'static str;
@@ -157,19 +183,20 @@ where
 
 type AsSystemUnit<U> = SystemUnit<<U as Unit>::System, <U as Unit>::Dim>;
 
-pub struct ScaledUnit<U, const NUM: u32, const DEN: u32 = 1> {
+pub struct ScaledUnit<U, R> {
     _unit: U,
+    _scale: R,
 }
 
-impl<U: Unit, const NUM: u32, const DEN: u32> Unit for ScaledUnit<U, NUM, DEN> {
+impl<U: Unit, R: UnsignedRational> Unit for ScaledUnit<U, R> {
     type System = <U as Unit>::System;
     type Dim = <U as Unit>::Dim;
 }
 
-impl<U: Unit, const NUM: u32, const DEN: u32> ScaledUnit<U, NUM, DEN> {
+impl<U: Unit, R: UnsignedRational> ScaledUnit<U, R> {
     pub fn new<T: Convertible>(value: T) -> Qnty<Self, T>
     where
-        U: ConversionTo<AsSystemUnit<U>>,
+        Self: ConversionTo<AsSystemUnit<U>>,
     {
         Qnty::from_raw_value(value.convert::<Conversion<Self, AsSystemUnit<U>>>())
     }
@@ -215,11 +242,11 @@ where
 }
 
 impl SystemConversionTo<TEnd, TEnd> for TEnd {
-    type Output = ConvInt<1>;
+    type Output = UF1;
 }
 
 impl<El, Ml, Er, Mr> SystemConversionTo<TMap<Er, Mr>, TEnd> for TMap<El, Ml> {
-    type Output = ConvInt<1>;
+    type Output = UF1;
 }
 
 /// Key of dimension list matches key of base unit list, so apply exponent to conversion
@@ -232,11 +259,10 @@ where
     TVal<El>: ConversionTo<TVal<Er>>,
     Conversion<TVal<El>, TVal<Er>>: Pow<TVal<Ed>>,
     Ml: SystemConversionTo<Mr, Md>,
-    ConvProd<Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>, SystemConversion<Ml, Mr, Md>>:
-        ConversionFactor,
+    Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>: Mul<SystemConversion<Ml, Mr, Md>>,
+    Prod<Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>, SystemConversion<Ml, Mr, Md>>: UnsignedRational,
 {
-    type Output =
-        ConvProd<Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>, SystemConversion<Ml, Mr, Md>>;
+    type Output = Prod<Exp<Conversion<TVal<El>, TVal<Er>>, TVal<Ed>>, SystemConversion<Ml, Mr, Md>>;
 }
 
 /// We have an entry in the system unit list that doesn't existing in the dimension, keep looking
@@ -252,34 +278,40 @@ impl<Sys1, Dim1, Sys2, Dim2> ConversionTo<SystemUnit<Sys2, Dim2>> for SystemUnit
 where
     Dim1: SameDimension<Dim2>,
     Sys1: SystemConversionTo<Sys2, Dim1>,
-    SystemConversion<Sys1, Sys2, Dim1>: ConversionFactor,
+    SystemConversion<Sys1, Sys2, Dim1>: UnsignedRational,
 {
     type Factor = SystemConversion<Sys1, Sys2, Dim1>;
 }
 
 /// Convert from a scaled unit to the base unit of a system (used with `Unit::new()`)
-impl<U: Unit, const NUM: u32, const DEN: u32, S2, D2> ConversionTo<SystemUnit<S2, D2>> for ScaledUnit<U, NUM, DEN>
-where 
-    U: ConversionTo<SystemUnit<S2, D2>>
+impl<U1, R1, S2, D2> ConversionTo<SystemUnit<S2, D2>> for ScaledUnit<U1, R1>
+where
+    U1: Unit + ConversionTo<SystemUnit<S2, D2>>,
+    R1: Mul<Conversion<U1, SystemUnit<S2, D2>>>,
+    Prod<R1, Conversion<U1, SystemUnit<S2, D2>>>: UnsignedRational,
 {
-    type Factor = ConvProd<ConvRatio<NUM, DEN>, Conversion<U, SystemUnit<S2, D2>>>;
+    type Factor = Prod<R1, Conversion<U1, SystemUnit<S2, D2>>>;
 }
 
 /// Convert from the base unit of system to a scaled unit (used with [`Qnty::value`])
-impl<U: Unit, const NUM: u32, const DEN: u32, S1, D1> ConversionTo<ScaledUnit<U, NUM, DEN>> for SystemUnit<S1, D1>
+impl<S, D, U, R> ConversionTo<ScaledUnit<U, R>> for SystemUnit<S, D>
 where 
-    SystemUnit<S1, D1>: ConversionTo<U>
+    SystemUnit<S, D>: ConversionTo<U>,
+    Conversion<SystemUnit<S, D>, U>: Div<R>,
+    Quot<Conversion<SystemUnit<S, D>, U>, R>: UnsignedRational,
 {
-    type Factor = ConvProd<ConvRatio<DEN, NUM>, Conversion<SystemUnit<S1, D1>, U>>;
+    type Factor = Quot<Conversion<SystemUnit<S, D>, U>, R>;
 }
 
 /// Convert between scaled units
-impl<U1, const NUM1: u32, const DEN1: u32,
-     U2, const NUM2: u32, const DEN2: u32> ConversionTo<ScaledUnit<U2, NUM2, DEN2>> for ScaledUnit<U1, NUM1, DEN1>
+impl<U1, R1, U2, R2> ConversionTo<ScaledUnit<U2, R2>> for ScaledUnit<U1, R1>
 where
-    U1: ConversionTo<U2>
+    U1: ConversionTo<U2>,
+    Conversion<U1, U2>: Div<R2>,
+    R1: Mul<Quot<Conversion<U1, U2>, R2>>,
+    Prod<R1, Quot<Conversion<U1, U2>, R2>>: UnsignedRational,
 {
-    type Factor = ConvProd<ConvRatio<NUM1,DEN1>, ConvProd<ConvRatio<DEN2,NUM2>,Conversion<U1, U2>>>;
+    type Factor = Prod<R1, Quot<Conversion<U1, U2>, R2>>;
 }
 
 #[cfg(test)]
@@ -294,12 +326,12 @@ mod test {
     macro_rules! assert_conv {
         ($val1:literal $U1:ty = $val2:literal $U2:ty) => {
             approx::assert_relative_eq!(
-                <Conversion::<$U1, $U2> as ConversionFactor>::REAL,
+                <Conversion::<$U1, $U2> as UnsignedRational>::F64,
                 $val2 as f64 / $val1 as f64,
                 epsilon = f32::EPSILON as f64
             );
             approx::assert_relative_eq!(
-                <Conversion::<$U2, $U1> as ConversionFactor>::REAL,
+                <Conversion::<$U2, $U1> as UnsignedRational>::F64,
                 $val1 as f64 / $val2 as f64,
                 epsilon = f32::EPSILON as f64
             );
@@ -317,7 +349,7 @@ mod test {
 
     #[test]
     fn conversion_impl() {
-        assert_eq!(<<SI as SystemConversionTo<SI, LengthDimension>>::Output as ConversionFactor>::REAL, 1.0);
+        assert_eq!(<<SI as SystemConversionTo<SI, LengthDimension>>::Output as UnsignedRational>::F32, 1.0);
     }
 
     #[test]
@@ -330,6 +362,7 @@ mod test {
         assert_conv!(0.9144 Meters = 1.0 Yards);
         assert_conv!(1 Yards = 3 Feet);
         assert_conv!(1 Miles = 5280 Feet);
+        assert_conv!(1 Miles = 1760 Yards);
 
         assert_conv!(1 HoursSI = 3_600 SecondsSI);
         assert_conv!(1 HoursIMP = 3_600 SecondsIMP);

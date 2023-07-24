@@ -4,6 +4,8 @@ use crate::{
     unit::*
 };
 
+use typenum::{consts::*, Shleft, Sum, UFrac};
+
 pub struct GramBaseUnit;
 impl BaseUnitTag for GramBaseUnit {
     type Dimension = MassBase;
@@ -13,7 +15,7 @@ impl BaseUnitInfo for GramBaseUnit {
     const SYMBOL: Info = "g";
 }
 
-pub type KilogramBaseUnit = ScaledBaseUnit<GramBaseUnit, 1000>;
+pub type KilogramBaseUnit = ScaledBaseUnit<GramBaseUnit, UFrac<U1000>>;
 impl BaseUnitInfo for KilogramBaseUnit {
     const NAME: Info = "kilo";
     const SYMBOL: Info = "kg";
@@ -24,12 +26,14 @@ impl BaseUnitTag for SlugBaseUnit {
     type Dimension = MassBase;
 }
 
+// 14590 = (56 << 8) + 254
+type U14590 = Sum<Shleft<U56, U8>, U254>;
 impl ConversionTo<GramBaseUnit> for SlugBaseUnit {
-    type Factor = ConvInt<14590>;
+    type Factor = UFrac<U14590>;
 }
 
 impl ConversionTo<SlugBaseUnit> for GramBaseUnit {
-    type Factor = ConvRatio<1,14590>;
+    type Factor = UFrac<U1, U14590>;
 }
 
 impl BaseUnitInfo for SlugBaseUnit {
@@ -37,7 +41,9 @@ impl BaseUnitInfo for SlugBaseUnit {
     const SYMBOL: Info = "slug";
 }
 
-pub type PoundMassBaseUnit = ScaledBaseUnit<SlugBaseUnit, 16087, 500>; // 16087/500 = 32.174
+// 16087 = (1005 << 4) + 7
+type U16087 = Sum<Shleft<U1005, U4>, U7>;
+pub type PoundMassBaseUnit = ScaledBaseUnit<SlugBaseUnit, UFrac<U16087, U500>>; // 16087/500 = 32.174
 impl BaseUnitInfo for PoundMassBaseUnit {
     const NAME: Info = "pound";
     const SYMBOL: Info = "lbm";

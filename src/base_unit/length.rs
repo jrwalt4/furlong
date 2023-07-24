@@ -4,6 +4,8 @@ use crate::{
     unit::*
 };
 
+use typenum::{Add1, consts::*, Shleft, UFrac};
+
 pub struct MeterBaseUnit;
 impl BaseUnitTag for MeterBaseUnit {
     type Dimension = LengthBase;
@@ -22,15 +24,17 @@ impl BaseUnitInfo for YardBaseUnit {
     const SYMBOL: Info = "yd";
 }
 
+type U1143 = Add1<Shleft<U571, U1>>;
+type U1250 = Shleft<U625, U1>;
 impl ConversionTo<MeterBaseUnit> for YardBaseUnit {
-    type Factor = ConvRatio<1143, 1250>;
+    type Factor = UFrac<U1143, U1250>;
 }
 
 impl ConversionTo<YardBaseUnit> for MeterBaseUnit {
-    type Factor = ConvRatio<1250, 1143>;
+    type Factor = UFrac<U1250, U1143>;
 }
 
-pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, 1, 3>;
+pub type FootBaseUnit = ScaledBaseUnit<YardBaseUnit, UFrac<U1, U3>>;
 impl BaseUnitInfo for FootBaseUnit {
     const NAME: Info = "feet";
     const SYMBOL: Info = "ft";
