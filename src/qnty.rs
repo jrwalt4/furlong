@@ -11,6 +11,7 @@ use crate::{
     unit::*
 };
 
+/// A quantity with a value and unit.
 #[repr(transparent)]
 pub struct Qnty<U, T = f64> {
     value: T,
